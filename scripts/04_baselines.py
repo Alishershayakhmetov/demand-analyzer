@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from demand import baselines as B  # noqa: E402
 from demand import config as C  # noqa: E402
 from demand import metrics as M  # noqa: E402
+from demand.evaluate import score  # noqa: E402
 
 FOLDS = C.DEV_CUTOFFS + [C.VAL_CUTOFF]
 
@@ -38,7 +39,7 @@ def main() -> None:
         quantiles = {0.5: B.weekday_quantile(hist, 0.5), 0.9: B.weekday_quantile(hist, 0.9)}
         for name, f in forecasts.items():
             f = np.clip(f, 0, None) * on_sale  # price is known ahead; an item with no price that week is not sold
-            rows.append(dict(cutoff=cutoff, model=name, **score(actual, f, hist, first_day, items)))
+            rows.append(dict(cutoff=cutoff, model=name, **score(actual, f, hist, first_day)))
         print(f"fold {cutoff} done in {time.time() - t0:.0f}s")
         for q, f in quantiles.items():
             f = f * on_sale
@@ -56,11 +57,6 @@ def main() -> None:
     q = res.dropna(subset=["pinball"]).groupby("model")[["pinball", "coverage"]].mean().round(4)
     print("\nQuantile baselines (mean over folds):")
     print(q.to_string())
-
-
-def score(actual, f, hist, first_day, items) -> dict:
-    per_item = [M.rmsse(actual[i], f[i], hist[i, max(first_day[i] - 1, 0):]) for i in range(len(actual))]
-    return dict(wape=M.wape(actual, f), bias=M.bias(actual, f), rmsse=float(np.nanmean(per_item)))
 
 
 if __name__ == "__main__":
