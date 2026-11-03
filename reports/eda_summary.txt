@@ -1,0 +1,38 @@
+panel (590700, 19), items 300, days 1969
+missing sales: 0, negative sales: 0
+rows not on sale: 20.786%; sales>0 while not on sale: 0
+zero-sales share (on sale): 0.539
+
+zero share and mean units/day by stratum:
+         zero_share   mean  max
+stratum                        
+high          0.333  3.841  138
+low           0.772  0.419   33
+mid           0.546  0.926   42
+
+items by category:
+cat_id
+FOODS        137
+HOUSEHOLD    111
+HOBBIES       52
+
+mean units per item-day by weekday (0=Mon): 1.39, 1.22, 1.19, 1.20, 1.42, 1.80, 1.87
+SNAP day mean 1.929 vs non-SNAP 1.774 (+8.8%)
+event day mean 1.777 vs normal 1.829 (-2.8%)
+lowest/highest events vs normal day: Christmas -100%, Thanksgiving -44%, NewYear -22%, LaborDay +28%, SuperBowl +28%, OrthodoxEaster +41%
+
+mean sales by price relative to item median (items with price changes):
+           mean    size
+pr_bin                 
+<0.9      3.210   15635
+0.9-0.98  2.187   41399
+~median   1.629  353358
+1.02-1.1  3.087   34981
+>1.1      1.021   14147
+
+demand class x stratum:
+demand_class  erratic  intermittent  lumpy  smooth
+stratum                                           
+high                9            47     25      19
+low                 0            91      8       1
+mid                 0            87     13       0
