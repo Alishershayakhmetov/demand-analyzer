@@ -10,7 +10,8 @@ Demand forecasting and purchase planning for a small shop. Course project, *AI E
 | EDA | done (`reports/eda_summary.txt`, `reports/figures/`) |
 | Baselines (naive, seasonal naive, moving average, weekday mean, ETS, Croston-SBA, TSB, empirical quantiles) | done |
 | Global LightGBM (Tweedie + quantiles), random-search tuning, daily / weekly / 28-day metrics | done |
-| Error analysis, SHAP, ablation | not started |
+| Error analysis | done |
+| SHAP, ablation | not started |
 | Inventory simulator and purchase policies | not started |
 | Streamlit app | not started |
 | Test fold evaluation | **not run on purpose**, to be opened once at the end |
@@ -71,6 +72,26 @@ Quantiles (pinball, lower is better; coverage target 0.5 / 0.9), mean over 4 fol
 The q90 advantage over the empirical baseline shows in the four-fold mean but not on the validation fold, so it is
 not established yet. Coverage of the LightGBM q90 is closer to 0.90 than the baseline (0.85) on average.
 
+## Error analysis (`scripts/08_error_analysis.py`, full tables in `reports/error_analysis.txt`)
+
+Model analysed: the untuned LightGBM, 4 folds, 300 items. Figures: `reports/figures/error_*.png`.
+
+- **Error follows volume, not model quality.** The 30 items (10%) with the largest error carry 34% of it; the high-volume
+  tercile has 75% of units and 61% of the error. The 10 worst items are all high-volume, with weekly WAPE 0.10-0.40
+  and no level shifts (median shift 0.16 vs 0.28 for all items): the forecast follows level and weekday pattern but
+  not daily spikes. Days with zero sales are 52% of item-days but only 30% of the error.
+- **Where LightGBM helps** (weekly WAPE vs the 28-day moving average): smooth items (+1% weekly, +9% daily),
+  high-volume items (+5% daily), mid-volume items (+5% weekly). Tuesday to Thursday are 6-7% better (daily WAPE), Saturday is not.
+- **Where it does not:** low-volume items (weekly WAPE 0.75 vs 0.66 for the average; bias +8%, it over-forecasts them),
+  erratic/lumpy items (no gain), and small price cuts (daily WAPE 1.18 vs 0.82, bias +20%). Only 1.4% of units fall
+  in promo weeks (31 item-weeks), so the price effect cannot be judged with this data.
+- **The edge over a 28-day average is not stable.** Weekly WAPE gain per fold: +4.1%, -2.9%, -4.0%, +2.2%.
+- **Bias.** LightGBM under-forecasts the fourth week (-9% on average; in 3 of 4 folds worse than the moving average),
+  and the sign of the overall bias changes between folds (-6.6%, -3.9%, +5.2%, -7.7%). That comes from level changes
+  of the store between windows and matters for safety stock: a policy built on these forecasts needs the sensitivity analysis.
+- **P90 calibration** by segment: LightGBM 0.86-0.92 (target 0.90), weekday empirical quantile 0.81-0.88.
+  The LightGBM quantile is better calibrated in every segment; erratic items are the weakest (0.86).
+
 ## Run
 
 ```bash
@@ -83,6 +104,7 @@ py -3.12 -m venv .venv
 .venv/Scripts/python scripts/05_lightgbm.py    # first untuned version
 .venv/Scripts/python scripts/06_tune.py        # ~15 min; stores forecasts_lgbm.npz
 .venv/Scripts/python scripts/07_report.py      # daily / weekly / 28-day tables -> reports/
+.venv/Scripts/python scripts/08_error_analysis.py
 ```
 
 `data/` is not tracked by git; everything in it is rebuilt by the scripts.

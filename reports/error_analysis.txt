@@ -1,0 +1,139 @@
+rows 33,600 (items 300, folds [1829, 1857, 1885, 1913]), on-sale rows 33,600
+WAPE per segment, daily level. gain_vs_MA28 > 0 means LightGBM is better.
+
+-- by demand class
+               rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+demand_class                                                                             
+erratic        1008        0.114     0.514  0.538  0.593   0.678     -0.037         0.044
+intermittent  25200        0.433     0.817  0.823  0.832   0.989     -0.044         0.007
+lumpy          5152        0.142     0.942  0.934  0.908   1.071     -0.028        -0.009
+smooth         2240        0.311     0.386  0.424  0.409   0.519     -0.020         0.089
+
+-- by volume stratum
+          rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+stratum                                                                             
+high     11200        0.750     0.541  0.570  0.575   0.702     -0.037         0.051
+low      11200        0.062     1.358  1.187  1.212   1.275      0.083        -0.144
+mid      11200        0.188     0.936  0.962  0.942   1.136     -0.057         0.026
+
+-- by category
+            rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+cat                                                                                   
+FOODS      15344        0.716     0.587  0.610  0.614   0.727     -0.050         0.037
+HOBBIES     5824        0.073     1.042  1.026  1.045   1.254      0.002        -0.015
+HOUSEHOLD  12432        0.211     0.804  0.808  0.796   0.980      0.012         0.005
+
+-- by price vs 91-day median
+               rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+price_bin                                                                                
+promo (<0.9)    188        0.014     0.569  0.567  0.499   0.594      0.154        -0.004
+small cut       643        0.012     1.181  0.820  0.824   0.936      0.202        -0.440
+normal        32382        0.930     0.670  0.690  0.691   0.830     -0.038         0.030
+small rise      336        0.042     0.455  0.479  0.527   0.573     -0.056         0.048
+rise (>1.1)      51        0.002     1.114  1.215  1.250   1.798      0.143         0.082
+
+-- by SNAP day
+       rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+snap                                                                             
+0     21600         0.64     0.665  0.683  0.690   0.830     -0.054         0.027
+1     12000         0.36     0.668  0.679  0.672   0.799      0.003         0.017
+
+-- by weekday (1=Sat)
+      rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+wday                                                                            
+1     4800        0.181     0.617  0.605  0.613   0.748     -0.041        -0.020
+2     4800        0.186     0.623  0.626  0.621   0.788     -0.052         0.004
+3     4800        0.134     0.660  0.660  0.678   0.831     -0.003         0.000
+4     4800        0.118     0.719  0.764  0.755   0.846     -0.007         0.060
+5     4800        0.117     0.710  0.763  0.761   0.879     -0.011         0.069
+6     4800        0.120     0.728  0.776  0.769   0.859     -0.036         0.062
+7     4800        0.144     0.658  0.659  0.668   0.832     -0.064         0.003
+
+-- by event day
+        rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+event                                                                             
+0.0    30000        0.888     0.667  0.683  0.685   0.821     -0.026         0.023
+1.0      300        0.011     0.620  0.660  0.612   0.811     -0.103         0.060
+2.0     1500        0.044     0.709  0.708  0.746   0.922     -0.058        -0.001
+3.0      300        0.009     0.583  0.590  0.603   0.694     -0.021         0.012
+4.0     1500        0.048     0.625  0.655  0.638   0.717     -0.122         0.045
+
+-- by horizon block
+          rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+h_block                                                                             
+days 1-7  8400        0.243     0.656  0.684  0.660   0.803      0.014         0.042
+8-14      8400        0.250     0.673  0.682  0.693   0.820     -0.012         0.013
+15-21     8400        0.252     0.663  0.683  0.679   0.820     -0.042         0.030
+22-28     8400        0.255     0.673  0.678  0.702   0.832     -0.091         0.008
+
+-- where the LightGBM absolute error comes from
+actual == 0 days: 52.4% of on-sale item-days, 29.8% of the error
+over-forecast share of the error 47.5%, under-forecast 52.5%
+error share by stratum: high 60.9%, low 12.7%, mid 26.4%
+top 10% items (30) carry 34.3% of the error
+
+
+WEEKLY level (item-week sums)
+-- by demand class
+              rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+demand_class                                                                            
+erratic        144        0.114     0.322  0.301  0.394   0.371     -0.037        -0.068
+intermittent  3600        0.433     0.407  0.412  0.434   0.485     -0.044         0.012
+lumpy          736        0.142     0.505  0.501  0.483   0.556     -0.028        -0.007
+smooth         320        0.311     0.186  0.188  0.219   0.238     -0.020         0.013
+
+-- by volume stratum
+         rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+stratum                                                                            
+high     1600        0.750     0.281  0.283  0.320   0.343     -0.037         0.005
+low      1600        0.062     0.751  0.655  0.661   0.729      0.083        -0.146
+mid      1600        0.188     0.452  0.478  0.471   0.547     -0.057         0.053
+
+-- by promo week
+                   rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+promo_week                                                                                   
+no promo           4769        0.986     0.342  0.343  0.371   0.407     -0.036         0.004
+promo week (<0.9)    31        0.014     0.380  0.287  0.238   0.273      0.196        -0.322
+
+-- by week ahead
+            rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+week_ahead                                                                            
+1           1200        0.243     0.312  0.314  0.319   0.360      0.014         0.007
+2           1200        0.250     0.342  0.343  0.370   0.406     -0.012         0.002
+3           1200        0.252     0.341  0.342  0.374   0.405     -0.042         0.005
+4           1200        0.255     0.374  0.369  0.414   0.447     -0.091        -0.013
+
+-- by SNAP days in week
+           rows  units_share  LightGBM   MA28    ETS  SNaive  LGBM_bias  gain_vs_MA28
+snap_days                                                                            
+0          2100        0.438     0.359  0.354  0.401   0.436     -0.062        -0.014
+1           300        0.061     0.296  0.302  0.281   0.321     -0.036         0.021
+2           300        0.068     0.346  0.365  0.347   0.369     -0.098         0.052
+3           600        0.122     0.344  0.338  0.388   0.430      0.016        -0.016
+4           300        0.059     0.307  0.309  0.318   0.367      0.045         0.006
+6           300        0.060     0.294  0.296  0.305   0.324      0.027         0.009
+7           900        0.191     0.344  0.348  0.358   0.397     -0.018         0.011
+
+-- P90 calibration (share of days with actual <= forecast; target 0.90)
+              LGBM q90  weekday q90
+erratic          0.861        0.821
+intermittent     0.904        0.862
+lumpy            0.881        0.813
+smooth           0.893        0.817
+high             0.886        0.827
+low              0.916        0.884
+mid              0.893        0.840
+
+-- 10 items with the largest LightGBM absolute error (4 folds)
+      item_id        class  adi  cv2  units  err_share  daily_wape  weekly_wape  wape_ma28   bias  level_shift  promo_days
+  FOODS_3_587 intermittent 1.33 0.24 2914.0      0.025       0.327        0.246      0.327 -0.038        0.172           0
+  FOODS_3_282       smooth 1.04 0.27 2547.0      0.023       0.353        0.169      0.451 -0.076        0.087           0
+  FOODS_3_406      erratic 1.17 0.60 1425.0      0.016       0.435        0.282      0.487 -0.039        0.116           0
+  FOODS_3_064       smooth 1.27 0.42 2968.0      0.016       0.207        0.115      0.259 -0.002        0.090           0
+  FOODS_3_099       smooth 1.05 0.15 1680.0      0.016       0.358        0.186      0.360  0.123        0.162           0
+  FOODS_1_200      erratic 1.03 0.69 1122.0      0.015       0.521        0.403      0.548 -0.111        0.491           0
+HOBBIES_1_030        lumpy 1.40 0.89  679.0      0.015       0.859        0.290      0.895 -0.004        0.197           0
+  FOODS_1_019 intermittent 1.94 0.40  787.0      0.015       0.732        0.357      0.814 -0.206        0.407           0
+  FOODS_3_080       smooth 1.00 0.14 2116.0      0.015       0.267        0.096      0.317 -0.046        0.083           0
+HOBBIES_1_016      erratic 1.26 1.38  598.0      0.012       0.805        0.292      0.803  0.021        0.164           0
+median level_shift over all items 0.28, over the worst 10 0.16
