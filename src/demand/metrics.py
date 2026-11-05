@@ -18,6 +18,12 @@ def rmsse(y: np.ndarray, f: np.ndarray, history: np.ndarray) -> float:
     return float(np.sqrt(np.mean((y - f) ** 2) / scale))
 
 
+def block_sums(a: np.ndarray, size: int = 7) -> np.ndarray:
+    """(items, days) -> (items, days // size) sums, e.g. daily to weekly demand per item."""
+    n, days = a.shape
+    return a.reshape(n, days // size, size).sum(axis=2)
+
+
 def pinball(y: np.ndarray, q_forecast: np.ndarray, q: float) -> float:
     """Mean pinball (quantile) loss normalised by mean demand, so it is comparable across series."""
     diff = y - q_forecast

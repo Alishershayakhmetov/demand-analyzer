@@ -1,0 +1,7 @@
+model,pinball,coverage,val_pinball,val_coverage
+lgbm_default_q50,0.465,0.6231,0.4586,0.5973
+lgbm_default_q90,0.4618,0.8985,0.504,0.8852
+lgbm_tuned_q50,0.4838,0.6249,0.4654,0.601
+lgbm_tuned_q90,0.4581,0.8948,0.4805,0.88
+weekday_q50_8w,0.5097,0.6721,0.4805,0.6508
+weekday_q90_8w,0.487,0.8504,0.4798,0.8342

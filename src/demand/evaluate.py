@@ -47,6 +47,21 @@ def load_matrices() -> Matrices:
     )
 
 
+def save_forecasts(name: str, store: dict[str, np.ndarray]) -> None:
+    """Keys look like '<cutoff>|<model>'; the actuals of a fold are stored under '<cutoff>|actual'."""
+    np.savez_compressed(C.PROC / f"forecasts_{name}.npz", **store)
+
+
+def load_forecasts(*names: str) -> dict[int, dict[str, np.ndarray]]:
+    out: dict[int, dict[str, np.ndarray]] = {}
+    for name in names:
+        with np.load(C.PROC / f"forecasts_{name}.npz") as z:
+            for key in z.files:
+                cutoff, model = key.split("|")
+                out.setdefault(int(cutoff), {})[model] = z[key]
+    return out
+
+
 def score(actual: np.ndarray, f: np.ndarray, hist: np.ndarray, first_day: np.ndarray) -> dict:
     per_item = [M.rmsse(actual[i], f[i], hist[i, max(first_day[i] - 1, 0):]) for i in range(len(actual))]
     return dict(wape=M.wape(actual, f), bias=M.bias(actual, f), rmsse=float(np.nanmean(per_item)))

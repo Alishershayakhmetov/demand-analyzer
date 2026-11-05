@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from demand import baselines as B  # noqa: E402
 from demand import config as C  # noqa: E402
 from demand import metrics as M  # noqa: E402
-from demand.evaluate import score  # noqa: E402
+from demand.evaluate import save_forecasts, score  # noqa: E402
 
 FOLDS = C.DEV_CUTOFFS + [C.VAL_CUTOFF]
 
@@ -23,7 +23,7 @@ def main() -> None:
     ON = panel.pivot(index="item_id", columns="d", values="on_sale").loc[ids].to_numpy()
     first_day = items.first_d.to_numpy().astype(int)
 
-    rows = []
+    rows, store = [], {}
     for cutoff in FOLDS:
         t0 = time.time()
         hist = Y[:, :cutoff]
@@ -39,12 +39,16 @@ def main() -> None:
         quantiles = {0.5: B.weekday_quantile(hist, 0.5), 0.9: B.weekday_quantile(hist, 0.9)}
         for name, f in forecasts.items():
             f = np.clip(f, 0, None) * on_sale  # price is known ahead; an item with no price that week is not sold
+            store[f"{cutoff}|{name}"] = f
             rows.append(dict(cutoff=cutoff, model=name, **score(actual, f, hist, first_day)))
+        store[f"{cutoff}|actual"] = actual
         print(f"fold {cutoff} done in {time.time() - t0:.0f}s")
         for q, f in quantiles.items():
             f = f * on_sale
+            store[f"{cutoff}|weekday_q{int(q * 100)}_8w"] = f
             rows.append(dict(cutoff=cutoff, model=f"weekday_q{int(q * 100)}_8w", pinball=np.nanmean(
                 [M.pinball(actual[i], f[i], q) for i in range(len(ids))]), coverage=M.coverage(actual, f)))
+    save_forecasts("baselines", store)
     res = pd.DataFrame(rows)
     res.to_csv(C.REPORTS / "baselines_by_fold.csv", index=False)
 
