@@ -11,7 +11,7 @@ Demand forecasting and purchase planning for a small shop. Course project, *AI E
 | Baselines (naive, seasonal naive, moving average, weekday mean, ETS, Croston-SBA, TSB, empirical quantiles) | done |
 | Global LightGBM (Tweedie + quantiles), random-search tuning, daily / weekly / 28-day metrics | done |
 | Error analysis | done |
-| SHAP, ablation | not started |
+| SHAP, ablation | done |
 | Inventory simulator and purchase policies | done (frontier comparison, no profit claim) |
 | Streamlit app | not started |
 | Test fold evaluation | **not run on purpose**, to be opened once at the end |
@@ -127,10 +127,51 @@ Paired bootstrap over items, 90% interval, change in inventory for the same 95% 
 
 The ranking is the same in every fold (lead time 3, 95% fill: LightGBM refresh 6.96 / 6.30 / 6.27 / 6.49 days vs 28-day
 average 7.46 / 6.66 / 6.50 / 6.74) and at all three lead times. The saving over a 28-day average is modest (2-6%)
-although the forecast WAPE looked tied; the likely reason is the weekday, price and SNAP pattern in the next 10 days
-(not tested; the ablation will show it).
+although the forecast WAPE looked tied. The ablation below rules out the calendar and price features as the reason: a
+model with only recent-demand features keeps the advantage (6.59 vs 6.54 days at 95% fill; 28-day average 6.83).
 Limits: one store, 4 windows of 28 days, intervals only cover item sampling, demand is censored by real stock-outs,
 the test fold is not used.
+
+## SHAP and feature ablation (`scripts/11_shap.py`, `scripts/12_ablation.py`)
+
+SHAP (exact tree SHAP from LightGBM, forecast rows of fold d1913, log scale of the Tweedie link; it describes the model,
+not causal effects). Details in `reports/shap_summary.txt`, figures `shap_beeswarm.png`, `shap_groups.png`.
+- Recent demand level carries 71% of the attribution (mean of the last 7/14/28/56/91 days, zero share, days since last
+  sale); calendar 10%, item type 5%, weekday history 4%, price 4%, horizon 3%, events 1.5%, SNAP 0.8%.
+- Weekday: Saturday/Sunday x1.21-1.23, Tuesday-Thursday x0.87-0.88. SNAP days only x1.02. Price cuts below 0.98 of the
+  median give x1.56-1.59, but from only 139 forecast rows; price rises give x1.09, which is not causal (the model has
+  no reason to raise demand when the price rises), so price attributions should not be read as elasticities.
+- The "horizon" attribution is confounded with the weekday: every forecast origin is a Sunday, so step h fixes the
+  weekday of the target day. Looking only at Sundays (steps 7, 14, 21, 28), the effect grows from x0.98 to x1.06.
+
+Ablation: each feature group is removed, the model is retrained on every fold and scored on the same 4 folds
+(default hyper-parameters, mean over folds). The full model is trained with 3 seeds; the seed noise is 0.07% (daily
+WAPE), 0.24% (weekly), 0.48% (28-day) and 0.6% (inventory days), so smaller differences are not interpretable.
+
+| Variant | daily WAPE | weekly WAPE | 28-day WAPE | inventory days, 95% fill, L=3 |
+|---|---|---|---|---|
+| full model (3 seeds) | 0.6663 | 0.3432 | 0.2428 | 6.54 |
+| no price | 0.6721 (+0.9%) | 0.3483 (+1.5%) | 0.2451 (+1.0%) | 6.51 |
+| no month / day of month | 0.6735 (+1.1%) | 0.3488 (+1.6%) | 0.2497 (+2.8%) | 6.55 |
+| no long history (56/91 d, age) | 0.6715 (+0.8%) | 0.3475 (+1.3%) | 0.2456 (+1.1%) | 6.57 |
+| no item type | 0.6700 (+0.6%) | 0.3460 (+0.8%) | 0.2456 (+1.1%) | 6.59 |
+| no SNAP / no events / no weekday / no horizon step | within +-0.8% | within +-0.8% | within +-0.9% | 6.50-6.55 |
+| no known-future covariates (price, SNAP, events, calendar) | 0.6621 (-0.6%) | **0.3348 (-2.4%)** | **0.2337 (-3.7%)** | 6.53 |
+| recent-demand level + horizon only | 0.6649 (-0.2%) | 0.3374 (-1.7%) | 0.2388 (-1.6%) | 6.59 |
+| 28-day average (reference) | 0.6817 | 0.3424 | 0.2474 | 6.83 |
+
+What this says:
+- Price, month/day of month, long history and item type each help a little (1-3%, above the noise).
+- **The known-future covariates as a whole do not help; removing them all improves the weekly and 28-day WAPE by 2-4%,
+  beyond the noise.** The model overfits them at this data size (300 items, one store). Single groups do not show it
+  because the remaining covariates compensate. The weekday features are redundant by construction (see above).
+- The inventory result is flat: no variant differs from the full model by more than ~1%, while all stay about 4% below
+  the 28-day average. LightGBM's inventory advantage therefore comes from the adaptive recent-level features and the weekly
+  refresh, not from price, SNAP or calendar.
+- This was measured on the same four folds that were used for earlier comparisons, so choosing the leaner model on
+  this evidence alone would be selection on those folds. To be settled with dev folds only, then checked on d1913.
+- Consequence for the app: the model only saw Sunday origins. It must be run on Mondays, or retrained with origins on all
+  weekdays, otherwise its step-to-weekday mapping is wrong.
 
 ## Run
 
@@ -147,6 +188,8 @@ py -3.12 -m venv .venv
 .venv/Scripts/python scripts/08_error_analysis.py
 .venv/Scripts/python scripts/09_rolling_forecasts.py   # weekly refreshed LightGBM forecasts
 .venv/Scripts/python scripts/10_inventory.py           # simulation, frontier, bootstrap
+.venv/Scripts/python scripts/11_shap.py
+.venv/Scripts/python scripts/12_ablation.py            # ~10 min
 .venv/Scripts/python -m unittest discover -s tests
 ```
 

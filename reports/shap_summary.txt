@@ -1,0 +1,44 @@
+mean |SHAP| (log scale) on 8,400 forecast rows of fold 1913; base value exp(-0.43) = 0.65 units
+mean14             0.356
+mean28             0.182
+days_since_sale    0.172
+mean91             0.152
+mean7              0.126
+wday               0.120
+mean56             0.077
+dept               0.057
+std28              0.055
+wd_mean8           0.051
+nz91               0.044
+price              0.044
+h                  0.037
+nz28               0.033
+month              0.032
+dom                0.028
+event              0.019
+price_vs_median    0.013
+age                0.011
+snap               0.010
+cat                0.008
+wd_mean4           0.008
+price_vs_origin    0.002
+wd_last            0.001
+
+mean |sum of SHAP| per feature group:
+recent demand level    0.714
+calendar               0.101
+item type              0.050
+weekday history        0.043
+price                  0.040
+horizon                0.030
+events                 0.015
+SNAP                   0.008
+
+mean SHAP by weekday (1=Sat), exp = multiplicative effect: 1: 1.21, 2: 1.23, 3: 0.97, 4: 0.88, 5: 0.87, 6: 0.88, 7: 1.00
+SNAP day effect 1.015x vs non-SNAP 0.993x
+event type effect: 0.0: 1.009x, 2.0: 0.893x, 4.0: 0.967x
+price_vs_median price < 0.9 of median: 32 rows, price-group SHAP 1.563x
+price_vs_median 0.9-0.98: 107 rows, price-group SHAP 1.594x
+price_vs_median about median: 8206 rows, price-group SHAP 1.008x
+price_vs_median > 1.02: 55 rows, price-group SHAP 1.092x
+horizon effect by step: 1: 0.87, 7: 0.98, 14: 1.01, 21: 1.04, 28: 1.06
