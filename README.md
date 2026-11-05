@@ -12,7 +12,7 @@ Demand forecasting and purchase planning for a small shop. Course project, *AI E
 | Global LightGBM (Tweedie + quantiles), random-search tuning, daily / weekly / 28-day metrics | done |
 | Error analysis | done |
 | SHAP, ablation | not started |
-| Inventory simulator and purchase policies | not started |
+| Inventory simulator and purchase policies | done (frontier comparison, no profit claim) |
 | Streamlit app | not started |
 | Test fold evaluation | **not run on purpose**, to be opened once at the end |
 
@@ -92,6 +92,46 @@ Model analysed: the untuned LightGBM, 4 folds, 300 items. Figures: `reports/figu
 - **P90 calibration** by segment: LightGBM 0.86-0.92 (target 0.90), weekday empirical quantile 0.81-0.88.
   The LightGBM quantile is better calibrated in every segment; erratic items are the weakest (0.86).
 
+## Inventory simulation (`src/demand/inventory.py`, `scripts/09_rolling_forecasts.py`, `scripts/10_inventory.py`)
+
+The data has no stock levels, so this is a simulation; the point is to compare forecasting methods under identical rules.
+
+Rules (all assumptions): one shop, every item reordered every 7 days, order arrives after a lead time L (1, 3 or 7 days),
+order-up-to level S = forecast demand over lead time + review period + z * sigma, lost sales (no backorders), integer units,
+start stock = L days of the 28-day average, demand = observed sales. Forecasts are refreshed at each weekly review from
+the demand seen so far; the LightGBM model is **not** retrained, only its inputs are refreshed (`lgbm_static` keeps one
+forecast per fold for reference). sigma is the standard deviation of the last 91 days times sqrt(L + 7) for every method
+except "own P90 spread", which takes it from the model's quantile forecast. Sweeping z traces an inventory-service
+frontier (`reports/figures/inventory_frontier.png`). Fill rate is revenue-weighted; inventory is in days of sales, so the
+unknown purchase-cost ratio cancels out and no profit is claimed. Items with no sale in the 28 days before a fold are
+left out of that fold (3.4% of demand value): demand that restarts after a long gap is invisible to every method.
+The logic is covered by `tests/test_inventory.py` (hand-computed example, conservation and monotonicity checks).
+
+Average inventory (days of sales) needed for the same fill rate, lead time 3 days, pooled over 4 folds:
+
+| Policy | 90% fill | 95% fill | 98% fill |
+|---|---|---|---|
+| owner: last 7 days | 6.12 | 7.78 | 10.17 |
+| 28-day average | 5.06 | 6.83 | 9.42 |
+| weekday average, 8 weeks | 5.07 | 6.96 | 9.97 |
+| LightGBM, one forecast | 4.95 | 6.80 | 9.57 |
+| **LightGBM, weekly refresh** | **4.86** | **6.51** | **8.85** |
+| LightGBM + own P90 spread | 4.87 | 6.63 | 9.08 |
+| perfect foresight (no safety stock) | 3.29 days for 100% fill | | |
+
+Paired bootstrap over items, 90% interval, change in inventory for the same 95% fill:
+- vs the owner's last-7-days rule: -16.6% [-18.6%, -14.3%] (-12% at lead time 1, -19% at lead time 7)
+- vs the 28-day average: -4.9% [-7.1%, -2.5%]; vs the 8-week weekday average: -6.5% [-9.2%, -3.9%]
+- weekly refresh vs a single forecast: -4.3% [-7.5%, -1.6%]
+- own P90 spread vs the plain sigma: +1.9% [+0.9%, +3.1%], i.e. the quantile model adds nothing here.
+
+The ranking is the same in every fold (lead time 3, 95% fill: LightGBM refresh 6.96 / 6.30 / 6.27 / 6.49 days vs 28-day
+average 7.46 / 6.66 / 6.50 / 6.74) and at all three lead times. The saving over a 28-day average is modest (2-6%)
+although the forecast WAPE looked tied; the likely reason is the weekday, price and SNAP pattern in the next 10 days
+(not tested; the ablation will show it).
+Limits: one store, 4 windows of 28 days, intervals only cover item sampling, demand is censored by real stock-outs,
+the test fold is not used.
+
 ## Run
 
 ```bash
@@ -105,6 +145,9 @@ py -3.12 -m venv .venv
 .venv/Scripts/python scripts/06_tune.py        # ~15 min; stores forecasts_lgbm.npz
 .venv/Scripts/python scripts/07_report.py      # daily / weekly / 28-day tables -> reports/
 .venv/Scripts/python scripts/08_error_analysis.py
+.venv/Scripts/python scripts/09_rolling_forecasts.py   # weekly refreshed LightGBM forecasts
+.venv/Scripts/python scripts/10_inventory.py           # simulation, frontier, bootstrap
+.venv/Scripts/python -m unittest discover -s tests
 ```
 
 `data/` is not tracked by git; everything in it is rebuilt by the scripts.
