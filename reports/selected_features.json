@@ -1,0 +1,17 @@
+{
+ "features": [
+  "mean7",
+  "mean14",
+  "mean28",
+  "mean56",
+  "mean91",
+  "std28",
+  "nz28",
+  "nz91",
+  "days_since_sale",
+  "age",
+  "h"
+ ],
+ "groups": [],
+ "threshold": 0.0028585585737856234
+}

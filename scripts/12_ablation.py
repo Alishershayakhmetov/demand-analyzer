@@ -17,13 +17,9 @@ from demand import config as C  # noqa: E402
 from demand import metrics as M  # noqa: E402
 from demand.evaluate import load_matrices  # noqa: E402
 from demand.features import CATEGORICAL, FEATURES, build_rows, training_rows  # noqa: E402
-from demand.inventory import inventory_at_fill, simulate  # noqa: E402
+from demand.modeling import COMMON, inventory_days  # noqa: E402
 
 FOLDS = C.DEV_CUTOFFS + [C.VAL_CUTOFF]
-LEAD, TARGET = 3, 0.95
-Z = np.arange(-1.0, 6.01, 0.25)
-COMMON = dict(learning_rate=0.05, n_estimators=400, num_leaves=63, min_child_samples=50, subsample=0.8, subsample_freq=1,
-              colsample_bytree=0.8, verbose=-1, n_jobs=-1, objective="tweedie", tweedie_variance_power=1.1)
 PRICE = ["price", "price_vs_median", "price_vs_origin"]
 WD_HIST = ["wd_mean8", "wd_mean4", "wd_last"]
 LEVEL = ["mean7", "mean14", "mean28", "mean56", "mean91", "std28", "nz28", "nz91", "days_since_sale", "age"]
@@ -44,25 +40,6 @@ VARIANTS = {
     "no horizon step": (["h"], 42),
     "recent-demand level + horizon only": ([f for f in FEATURES if f not in [*LEVEL, "h"]], 42),
 }
-
-
-def inventory_days(m, rolls: dict[int, list[np.ndarray]]) -> float:
-    span = LEAD + 7
-    sold = stock = np.zeros(len(Z))
-    dem = 0.0
-    for cutoff in FOLDS:
-        actual = m.Y[:, cutoff:cutoff + C.HORIZON]
-        price = np.nanmedian(m.PR[:, cutoff - 91:cutoff], axis=1)
-        active = (m.Y[:, cutoff - 28:cutoff].sum(axis=1) > 0)
-        init = np.ceil(m.Y[:, cutoff - 28:cutoff].mean(axis=1) * LEAD)
-        means = np.stack([rolls[cutoff][r][:, :span].sum(axis=1) for r in range(4)])
-        sigmas = np.stack([m.Y[:, :cutoff + 7 * r][:, -91:].std(axis=1) * np.sqrt(span) for r in range(4)])
-        s, k = simulate(actual, means, sigmas, Z, LEAD, init)
-        w = price * active
-        sold = sold + (s * w).sum(axis=1)
-        stock = stock + (k * w).sum(axis=1)
-        dem += (actual[:, LEAD:].sum(axis=1) * w).sum()
-    return inventory_at_fill(sold / dem, stock / dem, TARGET)
 
 
 def main() -> None:
@@ -93,7 +70,7 @@ def main() -> None:
             w.append(M.wape(M.block_sums(actual), M.block_sums(f)))
             m28.append(M.wape(M.block_sums(actual, 28), M.block_sums(f, 28)))
         rows.append(dict(variant=name, daily_wape=np.mean(d), weekly_wape=np.mean(w), wape_28d=np.mean(m28),
-                         inv_days_95=inventory_days(m, by_fold)))
+                         inv_days_95=inventory_days(m, by_fold, FOLDS)))
     res = pd.DataFrame(rows).set_index("variant")
     res.to_csv(C.REPORTS / "ablation_raw.csv")
 

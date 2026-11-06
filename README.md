@@ -12,6 +12,7 @@ Demand forecasting and purchase planning for a small shop. Course project, *AI E
 | Global LightGBM (Tweedie + quantiles), random-search tuning, daily / weekly / 28-day metrics | done |
 | Error analysis | done |
 | SHAP, ablation | done |
+| Feature selection on dev folds | done (lean 11-feature set chosen by the rule) |
 | Inventory simulator and purchase policies | done (frontier comparison, no profit claim) |
 | Streamlit app | not started |
 | Test fold evaluation | **not run on purpose**, to be opened once at the end |
@@ -169,9 +170,40 @@ What this says:
   the 28-day average. LightGBM's inventory advantage therefore comes from the adaptive recent-level features and the weekly
   refresh, not from price, SNAP or calendar.
 - This was measured on the same four folds that were used for earlier comparisons, so choosing the leaner model on
-  this evidence alone would be selection on those folds. To be settled with dev folds only, then checked on d1913.
+  this evidence alone would be selection on those folds. The selection was therefore redone on dev folds only (next section).
 - Consequence for the app: the model only saw Sunday origins. It must be run on Mondays, or retrained with origins on all
   weekdays, otherwise its step-to-weekday mapping is wrong.
+
+## Feature selection on dev folds (`scripts/13_feature_selection.py`, `reports/feature_selection.txt`)
+
+Protocol, fixed before running: forward selection of feature groups starting from recent-demand level + horizon step,
+criterion = mean weekly WAPE over the three dev folds (d1829, d1857, d1885), default hyper-parameters, a group is added
+only if it improves by more than max(2 x seed std, 0.001) = 0.0029. The validation fold d1913 was first looked at after
+the set was chosen; the test fold is not used.
+
+Outcome: **no group passed the threshold, the selected set is the 11 level + horizon features** (`reports/selected_features.json`).
+Dev weekly WAPE when adding one group to the start set (0.3362): weekday of target day 0.3349, events 0.3349, item type
+0.3354, SNAP 0.3357, weekday history 0.3390, month / day of month 0.3458, price 0.3536.
+
+Seed-averaged results (3 seeds):
+
+| Set | dev weekly WAPE | dev inventory days | val weekly WAPE | val inventory days | val daily WAPE | val 28-day WAPE |
+|---|---|---|---|---|---|---|
+| full, 24 features | 0.3435 | 6.54 | 0.3424 | 6.53 | 0.6665 | 0.2292 |
+| **selected, 11 features** | **0.3374** | 6.65 | **0.3410** | **6.46** | 0.6738 | 0.2350 |
+| 28-day average | 0.3398 | 6.86 | 0.3500 | 6.74 | 0.6900 | 0.2483 |
+
+Reading it honestly:
+- The lean model has the lowest weekly WAPE on dev (-1.8% vs full) and on validation (-0.4%), but the validation gain is
+  inside the noise and the validation daily and 28-day WAPE favour the full model. Inventory is mixed (dev: full is 1.7%
+  better, validation: lean is 1.1% better). The lean model is chosen by the rule, not because it clearly wins.
+- Against the 28-day average both models are better in inventory (dev -3 to -5%, validation -3 to -4%), but the weekly
+  WAPE gain of the lean model per fold is +2.5%, -0.6%, +0.1%, +2.6% (folds in order d1829 ... d1913): small and unstable.
+- Price features hurt in the lean model, 5% worse weekly WAPE when added (exploratory dev-only check, not used for the
+  selection): relative price (price / median, price / origin price) causes it, raw price alone is neutral (+0.3%).
+  Why is not established; a candidate is a promotion effect that does not carry over from the 2011-2015 training period.
+- The choice depends on the design with Sunday origins, where horizon step h is the only weekday signal. A model used on
+  other weekdays needs training origins on all weekdays plus the weekday feature; selection should be repeated then.
 
 ## Run
 
@@ -190,6 +222,7 @@ py -3.12 -m venv .venv
 .venv/Scripts/python scripts/10_inventory.py           # simulation, frontier, bootstrap
 .venv/Scripts/python scripts/11_shap.py
 .venv/Scripts/python scripts/12_ablation.py            # ~10 min
+.venv/Scripts/python scripts/13_feature_selection.py   # ~7 min, writes reports/selected_features.json
 .venv/Scripts/python -m unittest discover -s tests
 ```
 

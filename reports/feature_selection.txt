@@ -1,0 +1,27 @@
+start set (recent-demand level + horizon): dev weekly WAPE per seed [0.3362 0.339  0.3371], threshold for adding a group 0.0029
+
+round 1: current weekly 0.3362; weekday of target day 0.3349, events 0.3349, item type 0.3354, SNAP 0.3357, weekday history 0.3390, month / day of month 0.3458, price 0.3536
+  -> stop, best candidate 'weekday of target day' improves by only +0.0013 (< 0.0029)
+
+selected groups: none (level + horizon only)
+selected features (11): ['mean7', 'mean14', 'mean28', 'mean56', 'mean91', 'std28', 'nz28', 'nz91', 'days_since_sale', 'age', 'h']
+
+Seed-averaged results (3 seeds, mean +- std of the seeds); the validation fold was first looked at here
+                          split              model  daily_wape  weekly_wape  wape_28d  weekly_std  inv_days_95
+dev folds (d1829, d1857, d1885) full (24 features)      0.6662       0.3435    0.2473      0.0008       6.5360
+dev folds (d1829, d1857, d1885)    level + horizon      0.6622       0.3374    0.2398      0.0014       6.6518
+dev folds (d1829, d1857, d1885)      selected (11)      0.6622       0.3374    0.2398      0.0014       6.6518
+dev folds (d1829, d1857, d1885)     28-day average      0.6789       0.3398    0.2471         NaN       6.8593
+          validation fold d1913 full (24 features)      0.6665       0.3424    0.2292      0.0025       6.5293
+          validation fold d1913    level + horizon      0.6738       0.3410    0.2350      0.0005       6.4595
+          validation fold d1913      selected (11)      0.6738       0.3410    0.2350      0.0005       6.4595
+          validation fold d1913     28-day average      0.6900       0.3500    0.2483         NaN       6.7407
+
+Weekly WAPE per fold (mean of 3 seeds)
+                    fold 1829  fold 1857  fold 1885  fold 1913
+full (24 features)     0.3449     0.3491     0.3364     0.3424
+level + horizon        0.3484     0.3395     0.3245     0.3410
+selected (11)          0.3484     0.3395     0.3245     0.3410
+28-day average         0.3573     0.3374     0.3248     0.3500
+
+runtime 383s
