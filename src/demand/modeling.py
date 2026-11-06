@@ -47,9 +47,16 @@ def inventory_days(m: Matrices, rolls: dict[int, list[np.ndarray]], folds: list[
 
 def inventory_frontier(m: Matrices, rolls: dict[int, list[np.ndarray]], folds: list[int], lead: int = LEAD) -> tuple[np.ndarray, np.ndarray]:
     """Fill rate and average inventory (days of sales) for every z in Z, pooled over `folds`."""
+    sold, stock, dem = inventory_by_item(m, rolls, folds, lead)
+    return sold.sum(axis=1) / dem.sum(), stock.sum(axis=1) / dem.sum()
+
+
+def inventory_by_item(m: Matrices, rolls: dict[int, list[np.ndarray]], folds: list[int], lead: int = LEAD
+                      ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Per item, summed over folds: revenue sold and end-of-day stock value for every z (z, items), and demand value (items)."""
     span = lead + 7
-    sold = stock = np.zeros(len(Z))
-    dem = 0.0
+    n = len(m.ids)
+    sold, stock, dem = np.zeros((len(Z), n)), np.zeros((len(Z), n)), np.zeros(n)
     for cutoff in folds:
         actual = m.Y[:, cutoff:cutoff + C.HORIZON]
         price = np.nanmedian(m.PR[:, cutoff - 91:cutoff], axis=1)
@@ -59,7 +66,7 @@ def inventory_frontier(m: Matrices, rolls: dict[int, list[np.ndarray]], folds: l
         sigmas = np.stack([m.Y[:, :cutoff + 7 * r][:, -91:].std(axis=1) * np.sqrt(span) for r in range(4)])
         s, k = simulate(actual, means, sigmas, Z, lead, init)
         w = price * active
-        sold = sold + (s * w).sum(axis=1)
-        stock = stock + (k * w).sum(axis=1)
-        dem += (actual[:, lead:].sum(axis=1) * w).sum()
-    return sold / dem, stock / dem
+        sold += s * w
+        stock += k * w
+        dem += actual[:, lead:].sum(axis=1) * w
+    return sold, stock, dem

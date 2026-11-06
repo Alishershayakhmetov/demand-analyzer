@@ -1,0 +1,98 @@
+scoring forecast origin d1941 (TEST FOLD), window d1942..d1969, 300 items
+model SHA-256 8243c89b8dccf90a... matches models/meta.json
+stored pre-test forecast vs this run (masked by price availability): max abs diff 7.57e-01
+
+Point forecasts on the fold (WAPE; bias > 0 means over-forecast)
+                                            daily_wape  weekly_wape  wape_28d  weekly_bias  daily_rmsse
+model                                                                                                  
+LightGBM full 24 (3 seeds avg)                  0.7275       0.4109    0.3240       0.0207       0.7839
+LightGBM selected 11 (seeds 42, 1, 2 avg)       0.7287       0.4166    0.3246      -0.0161       0.7856
+LightGBM selected 11 (FINAL, stored model)      0.7325       0.4221    0.3316      -0.0191       0.7860
+28-day average                                  0.7470       0.4274    0.3367       0.0068       0.7999
+AutoETS                                         0.7345       0.4283    0.3443       0.0759       0.7967
+weekday average, 8 weeks                        0.7506       0.4332    0.3510      -0.0276       0.8231
+TSB                                             0.7609       0.4473    0.3648       0.1028       0.8180
+seasonal naive                                  0.8706       0.4484    0.3705       0.0335       1.0537
+CrostonSBA                                      0.7810       0.4670    0.3829      -0.0121       0.8107
+naive                                           1.0749       0.9245    0.8930       0.3622       1.0879
+
+Inventory simulation: 296 of 300 items active (no sale in the 28 days before the origin are left out)
+Inventory (days of sales) for a revenue-weighted fill rate of 90 / 95 / 98%
+ lead                                policy  inv@90%  inv@95%  inv@98%  max_fill
+    1                    owner: last 7 days     6.15     7.75     9.69       1.0
+    1                        28-day average     5.63     7.32     9.34       1.0
+    1              weekday average, 8 weeks     6.38     8.45    11.36       1.0
+    1             LightGBM full 24 features     5.94     7.89    10.34       1.0
+    1 LightGBM selected 11 features (final)     5.83     7.61     9.88       1.0
+    3                    owner: last 7 days     7.01     8.66    11.01       1.0
+    3                        28-day average     6.10     7.90    10.13       1.0
+    3              weekday average, 8 weeks     6.84     9.32    12.41       1.0
+    3             LightGBM full 24 features     6.52     8.84    11.79       1.0
+    3 LightGBM selected 11 features (final)     6.22     8.44    11.54       1.0
+    7                    owner: last 7 days     9.62    11.62    14.57       1.0
+    7                        28-day average     7.85    10.18    13.53       1.0
+    7              weekday average, 8 weeks     9.10    12.62    18.13       1.0
+    7             LightGBM full 24 features     8.49    11.81    17.45       1.0
+    7 LightGBM selected 11 features (final)     8.70    11.76    16.27       1.0
+
+Paired bootstrap over items (1000 resamples): change in inventory for the same fill, median [90% interval]
+L=1 fill 90%: final vs owner: last 7 days: -6.2% [-14.1%, +3.7%]
+L=1 fill 90%: final vs 28-day average: +2.7% [-4.3%, +12.1%]
+L=1 fill 90%: final vs weekday average, 8 weeks: -8.2% [-13.7%, -3.0%]
+L=1 fill 90%: final vs LightGBM full 24 features: -1.7% [-6.6%, +3.4%]
+L=1 fill 95%: final vs owner: last 7 days: -2.5% [-11.5%, +7.4%]
+L=1 fill 95%: final vs 28-day average: +3.4% [-4.9%, +14.5%]
+L=1 fill 95%: final vs weekday average, 8 weeks: -9.5% [-16.2%, -2.7%]
+L=1 fill 95%: final vs LightGBM full 24 features: -3.1% [-7.4%, +3.5%]
+L=1 fill 98%: final vs owner: last 7 days: +1.4% [-8.7%, +14.3%]
+L=1 fill 98%: final vs 28-day average: +4.8% [-4.5%, +18.9%]
+L=1 fill 98%: final vs weekday average, 8 weeks: -11.7% [-15.8%, -2.7%]
+L=1 fill 98%: final vs LightGBM full 24 features: -3.9% [-7.3%, +4.4%]
+L=3 fill 90%: final vs owner: last 7 days: -11.7% [-20.2%, -0.9%]
+L=3 fill 90%: final vs 28-day average: +1.4% [-4.0%, +10.7%]
+L=3 fill 90%: final vs weekday average, 8 weeks: -8.4% [-15.6%, -1.1%]
+L=3 fill 90%: final vs LightGBM full 24 features: -4.2% [-11.7%, +2.4%]
+L=3 fill 95%: final vs owner: last 7 days: -3.5% [-15.1%, +13.3%]
+L=3 fill 95%: final vs 28-day average: +6.0% [-3.1%, +20.9%]
+L=3 fill 95%: final vs weekday average, 8 weeks: -8.0% [-12.9%, -0.7%]
+L=3 fill 95%: final vs LightGBM full 24 features: -3.9% [-8.4%, +3.5%]
+L=3 fill 98%: final vs owner: last 7 days: +3.4% [-13.9%, +24.4%]
+L=3 fill 98%: final vs 28-day average: +12.6% [-3.1%, +33.0%]
+L=3 fill 98%: final vs weekday average, 8 weeks: -6.0% [-10.1%, -0.6%]
+L=3 fill 98%: final vs LightGBM full 24 features: -1.3% [-4.9%, +5.8%]
+L=7 fill 90%: final vs owner: last 7 days: -10.4% [-21.0%, +5.4%]
+L=7 fill 90%: final vs 28-day average: +9.7% [-1.2%, +27.7%]
+L=7 fill 90%: final vs weekday average, 8 weeks: -4.7% [-8.8%, -0.7%]
+L=7 fill 90%: final vs LightGBM full 24 features: +2.5% [-4.1%, +5.4%]
+L=7 fill 95%: final vs owner: last 7 days: -0.2% [-15.6%, +23.3%]
+L=7 fill 95%: final vs 28-day average: +14.2% [-1.7%, +38.5%]
+L=7 fill 95%: final vs weekday average, 8 weeks: -6.7% [-11.5%, -1.0%]
+L=7 fill 95%: final vs LightGBM full 24 features: -0.1% [-10.6%, +7.0%]
+L=7 fill 98%: final vs owner: last 7 days: +9.1% [-11.4%, +27.4%]
+L=7 fill 98%: final vs 28-day average: +18.0% [-2.8%, +41.4%]
+L=7 fill 98%: final vs weekday average, 8 weeks: -8.8% [-12.6%, -0.4%]
+L=7 fill 98%: final vs LightGBM full 24 features: -6.1% [-11.5%, +10.0%]
+
+Weekly WAPE by segment (final model vs comparators)
+                                 seasonal naive  28-day average  weekday average, 8 weeks  LightGBM selected 11 (FINAL, stored model)
+stratum=high (100)                       0.3853          0.3846                    0.3954                                      0.3843
+stratum=low (100)                        0.6737          0.5908                    0.5879                                      0.6037
+stratum=mid (100)                        0.5924          0.5206                    0.5114                                      0.4898
+demand_class=erratic (9)                 0.4046          0.4440                    0.4184                                      0.4102
+demand_class=intermittent (225)          0.4801          0.4624                    0.4808                                      0.4722
+demand_class=lumpy (46)                  0.5656          0.4828                    0.4576                                      0.4379
+demand_class=smooth (20)                 0.3408          0.3262                    0.3425                                      0.3311
+
+Same metrics on the dev folds and the validation fold (earlier runs, for comparison)
+                          split          model  daily_wape  weekly_wape  wape_28d  inv_days_95
+dev folds (d1829, d1857, d1885)  selected (11)      0.6622       0.3374    0.2398       6.6518
+dev folds (d1829, d1857, d1885) 28-day average      0.6789       0.3398    0.2471       6.8593
+          validation fold d1913  selected (11)      0.6738       0.3410    0.2350       6.4595
+          validation fold d1913 28-day average      0.6900       0.3500    0.2483       6.7407
+
+Pre-declared hypotheses
+H1 weekly WAPE final 0.4221 vs seasonal naive 0.4484 (-5.9%, needs <= -10%): NOT SUPPORTED
+H2 weekly WAPE final 0.4221 vs 28-day average 0.4274 (-1.2%, needs <= +3%): SUPPORTED
+H3 inventory at 95% fill, L=3: vs owner -3.5% [-15.1%, +13.3%] (needs <= -10% and interval below 0): NOT SUPPORTED; vs 28-day average +6.0% [-3.1%, +20.9%] (interval below 0): NOT SUPPORTED
+
+runtime 75s

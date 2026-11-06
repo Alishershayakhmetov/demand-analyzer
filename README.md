@@ -15,7 +15,7 @@ Demand forecasting and purchase planning for a small shop. Course project, *AI E
 | Feature selection on dev folds | done (lean 11-feature set chosen by the rule) |
 | Inventory simulator and purchase policies | done (frontier comparison, no profit claim) |
 | Streamlit app | done (demo + CSV upload, RU/EN) |
-| Test fold evaluation | **not run on purpose**, to be opened once at the end |
+| Test fold evaluation | **scored once** (see "Test fold"): forecasts beat seasonal naive by only 6%, inventory edge did not reproduce |
 
 ## Data
 
@@ -29,7 +29,7 @@ assumptions (to be documented when it is built).
 ## Evaluation protocol
 
 Time-based only. A fold trains on `d <= cutoff` and forecasts the next 28 days (four Monday-to-Sunday weeks).
-Dev folds end at d1829, d1857, d1885; validation fold d1913; **test fold d1941 (d1942..d1969) is unused so far**.
+Dev folds end at d1829, d1857, d1885; validation fold d1913; **test fold d1941 (d1942..d1969) was scored once at the end (section "Test fold")**; all numbers above this section come from dev and validation folds only.
 Prices, SNAP and calendar columns of the forecast days are treated as known in advance; demand features use only the past.
 A forecast is set to 0 for days without a price (the item is not on sale that week). This applies to every model.
 
@@ -204,6 +204,61 @@ Reading it honestly:
   Why is not established; a candidate is a promotion effect that does not carry over from the 2011-2015 training period.
 - The choice depends on the design with Sunday origins, where horizon step h is the only weekday signal. A model used on
   other weekdays needs training origins on all weekdays plus the weekday feature; selection should be repeated then.
+
+## Test fold (`scripts/15_test_fold.py`, `reports/test_results.txt`, scored once)
+
+The window d1942..d1969 (2016-05-23 to 2016-06-19) was never used for training, tuning or selection. The script declared
+three hypotheses and the evaluation rules before running, checked the model's SHA-256 against `models/meta.json`, and refuses to
+run a second time. Its code was first run on the validation fold as a plumbing check (it reproduced the earlier numbers). Result,
+whatever it was, is reported here; nothing was changed afterwards.
+
+**Pre-declared hypotheses: H1 not supported, H2 supported, H3 not supported.**
+- H1 (weekly WAPE at least 10% below seasonal naive): 0.4221 vs 0.4484 = -5.9%. Not supported.
+- H2 (weekly WAPE not more than 3% above the 28-day average): 0.4221 vs 0.4274 = -1.2%. Supported.
+- H3 (at 95% fill, lead time 3, at least 10% less inventory than the owner rule and less than the 28-day average, both with a
+  bootstrap interval below zero): vs owner -3.5% [-15.1%, +13.3%], vs 28-day average +6.0% [-3.1%, +20.9%]. Not supported.
+
+Point forecasts on the fold:
+
+| Model | daily WAPE | weekly WAPE | 28-day WAPE | weekly bias |
+|---|---|---|---|---|
+| LightGBM, full 24 features (3 seeds avg) | 0.7275 | 0.4109 | 0.3240 | +2.1% |
+| LightGBM, selected 11 (3 seeds avg) | 0.7287 | 0.4166 | 0.3246 | -1.6% |
+| **LightGBM, selected 11, final stored model (seed 42)** | 0.7325 | 0.4221 | 0.3316 | -1.9% |
+| 28-day average | 0.7470 | 0.4274 | 0.3367 | +0.7% |
+| AutoETS | 0.7345 | 0.4283 | 0.3443 | +7.6% |
+| weekday average, 8 weeks | 0.7506 | 0.4332 | 0.3510 | -2.8% |
+| seasonal naive | 0.8706 | 0.4484 | 0.3705 | +3.4% |
+
+Inventory (days of sales) for 95% revenue-weighted fill, weekly refresh, 296 of 300 items active:
+
+| Policy | lead time 1 | lead time 3 | lead time 7 |
+|---|---|---|---|
+| owner: last 7 days | 7.75 | 8.66 | 11.62 |
+| 28-day average | **7.32** | **7.90** | **10.18** |
+| weekday average, 8 weeks | 8.45 | 9.32 | 12.62 |
+| LightGBM, full 24 | 7.89 | 8.84 | 11.81 |
+| LightGBM, selected 11 (final) | 7.61 | 8.44 | 11.76 |
+
+What this says:
+- Every method is worse on this window than on the earlier folds (weekly WAPE 0.41-0.45 against 0.34-0.37). The window contains
+  Memorial Day (2016-05-30); why the error is higher was not analysed.
+- The final model is better than seasonal naive and slightly better than the 28-day average in forecast error (-1.2% weekly, -1.9% daily),
+  the same direction as before but smaller than the earlier gap to seasonal naive (6% instead of 8-16%).
+- **The inventory advantage did not reproduce.** The final model needs more inventory than the plain 28-day average at all three lead
+  times (+3% to +14% at 95% fill; all three intervals include zero) and beats the owner rule by only 0-4% at 95% fill (intervals include
+  zero; the earlier folds gave -15% to -17% at lead time 3). Against the 8-week weekday average it is better by 7-10%
+  (interval excludes zero). The claim "LightGBM saves inventory over simple rules" is therefore **not supported by the test fold**.
+- The single stored model (seed 42) is 1.3% worse in weekly WAPE than the average of three seeds of the same feature set, so seed noise
+  is as large as several of the differences between the models above.
+- The 24-feature model is 1.4% better in weekly WAPE than the 11-feature average of three seeds (2.7% better than the stored model);
+  the dev-fold selection of the lean set did not carry over to this window. One window cannot show which is better.
+- By segment (weekly WAPE, final vs 28-day average): mid-volume items 0.490 vs 0.521 and lumpy items 0.438 vs 0.483 are better,
+  low-volume items 0.604 vs 0.591 are worse.
+- The forecast stored before the test (`reports/test_window_forecast.csv`, produced by the app code path) differs from the scored one by up to
+  0.76 units on one item-day, because the `age` feature is defined from the first price day in training and from the first sale in the app.
+  Scored on the same fold, the stored forecast gives weekly WAPE 0.4216 (scored model 0.4221), so the difference does not matter in accuracy.
+- Not evaluated: quantile forecasts (not part of the final model), profit, another store.
 
 ## App (`app/streamlit_app.py`, `src/demand/serving.py`)
 

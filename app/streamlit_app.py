@@ -40,11 +40,12 @@ TXT = {
                  "safety_stock": "Страх. запас", "on_hand": "Остаток", "on_order": "В пути", "order_qty": "Заказать", "order_value": "Сумма"},
         "quality_note": "Таблицы ниже посчитаны заранее на исторических окнах M5 (не на ваших данных).",
         "quality_tbl": "Проверка выбранной модели на фолде d1913 (после выбора признаков по dev-фолдам)",
+        "test_tbl": "Итоговое тестовое окно d1942–1969 (оценено один раз; ошибка выше, чем на прежних окнах)",
         "limits": "#### Ограничения и риски\n"
                   "- **Модель обучена на одном магазине (M5, CA_1)**. Для другого бизнеса качество не проверено; перед использованием сравните с вашим текущим методом.\n"
                   "- **Остатков и закупочных цен в данных нет**, поэтому план закупок проверен только на симуляции (запас при одинаковом уровне обслуживания), прибыль не оценивалась.\n"
                   "- **Прогноз не знает про акции, цены и праздники**: на этих данных такие признаки не улучшили точность, поэтому модель использует только историю продаж.\n"
-                  "- Выигрыш над простым средним за 28 дней небольшой (3–5% по запасу) и нестабилен между периодами; над правилом «как за прошлую неделю» заметнее (~17%).\n"
+                  "- Выигрыш над простым средним за 28 дней небольшой и нестабилен: на предыдущих окнах 3–5% по запасу, на итоговом тестовом окне его нет (модель требует на ~6% больше запаса, интервал включает 0). Над правилом «как за прошлую неделю» на тестовом окне выигрыш всего 0–4%.\n"
                   "- Продажи ≠ спрос: если товара не было на полке, спрос не виден. Товары без продаж 28 дней не планируются; новые (<28 дней) получают только среднее.\n"
                   "- История обрезается по последнее воскресенье: модель обучена на прогнозах, начинающихся с понедельника.\n"
                   "- План — рекомендация. Решение о заказе принимает человек, особенно для дорогих и скоропортящихся товаров.",
@@ -76,11 +77,12 @@ TXT = {
                  "safety_stock": "Safety stock", "on_hand": "On hand", "on_order": "On order", "order_qty": "Order", "order_value": "Value"},
         "quality_note": "The tables below were computed in advance on historical M5 windows (not on your data).",
         "quality_tbl": "Check of the selected model on fold d1913 (after feature selection on the dev folds)",
+        "test_tbl": "Final test window d1942-1969 (scored once; errors are higher than on the earlier windows)",
         "limits": "#### Limits and risks\n"
                   "- **The model was trained on one store (M5, CA_1)**. Quality on another business is not verified; compare with your current method first.\n"
                   "- **The data has no stock levels or purchase costs**, so the plan was only tested in a simulation (inventory at equal service level); profit was not estimated.\n"
                   "- **The forecast does not know about promotions, prices or holidays**: such features did not improve accuracy on this data, so the model uses sales history only.\n"
-                  "- The gain over a plain 28-day average is small (3-5% in inventory) and unstable across periods; over the 'same as last week' rule it is larger (~17%).\n"
+                  "- The gain over a plain 28-day average is small and unstable: 3-5% less inventory on earlier windows, none on the final test window (about 6% more inventory, interval includes 0). Over the 'same as last week' rule the test-window gain is only 0-4%.\n"
                   "- Sales are not demand: stock-outs hide demand. Items with no sales for 28 days are not planned; new items (<28 days) only get their average.\n"
                   "- History is cut at the last Sunday: the model was trained on forecasts starting on a Monday.\n"
                   "- The plan is a recommendation. A person decides the order, especially for expensive or perishable items.",
@@ -238,6 +240,12 @@ def main() -> None:
             res = res[res.split.str.startswith("validation")].drop(columns=["split", "weekly_std"]).round(4)
             st.markdown(f"**{t['quality_tbl']}**")
             st.dataframe(res.rename(columns={"model": "model", "inv_days_95": "inventory days @95% fill"}), hide_index=True, width="stretch")
+        test_path = C.REPORTS / "test_point_metrics.csv"
+        if test_path.exists():
+            tst = pd.read_csv(test_path)
+            keep = ["seasonal naive", "28-day average", "weekday average, 8 weeks", "AutoETS", "LightGBM selected 11 (FINAL, stored model)"]
+            st.markdown(f"**{t['test_tbl']}**")
+            st.dataframe(tst[tst.model.isin(keep)][["model", "daily_wape", "weekly_wape", "wape_28d"]], hide_index=True, width="stretch")
         fig_path = C.REPORTS / "figures" / "inventory_frontier.png"
         if fig_path.exists():
             st.image(str(fig_path), caption="Inventory vs fill rate, M5 backtests (lower and to the left is better)")

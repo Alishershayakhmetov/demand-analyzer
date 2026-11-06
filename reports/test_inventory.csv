@@ -1,0 +1,16 @@
+lead,policy,inv@90%,inv@95%,inv@98%,max_fill
+1,owner: last 7 days,6.151,7.755,9.689,1.0
+1,28-day average,5.63,7.321,9.339,0.999
+1,"weekday average, 8 weeks",6.38,8.45,11.358,0.999
+1,LightGBM full 24 features,5.941,7.89,10.336,1.0
+1,LightGBM selected 11 features (final),5.825,7.612,9.878,0.999
+3,owner: last 7 days,7.009,8.655,11.014,1.0
+3,28-day average,6.101,7.899,10.127,0.999
+3,"weekday average, 8 weeks",6.839,9.318,12.412,0.999
+3,LightGBM full 24 features,6.515,8.839,11.791,0.999
+3,LightGBM selected 11 features (final),6.225,8.438,11.542,0.999
+7,owner: last 7 days,9.622,11.625,14.573,0.999
+7,28-day average,7.853,10.179,13.528,0.999
+7,"weekday average, 8 weeks",9.101,12.616,18.129,0.997
+7,LightGBM full 24 features,8.487,11.81,17.451,0.999
+7,LightGBM selected 11 features (final),8.701,11.758,16.267,0.999

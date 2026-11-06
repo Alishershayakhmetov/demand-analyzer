@@ -1,0 +1,11 @@
+model,daily_wape,weekly_wape,wape_28d,weekly_bias,daily_rmsse
+naive,1.0749,0.9245,0.893,0.3622,1.0879
+seasonal naive,0.8706,0.4484,0.3705,0.0335,1.0537
+28-day average,0.747,0.4274,0.3367,0.0068,0.7999
+"weekday average, 8 weeks",0.7506,0.4332,0.351,-0.0276,0.8231
+AutoETS,0.7345,0.4283,0.3443,0.0759,0.7967
+CrostonSBA,0.781,0.467,0.3829,-0.0121,0.8107
+TSB,0.7609,0.4473,0.3648,0.1028,0.818
+LightGBM full 24 (3 seeds avg),0.7275,0.4109,0.324,0.0207,0.7839
+"LightGBM selected 11 (seeds 42, 1, 2 avg)",0.7287,0.4166,0.3246,-0.0161,0.7856
+"LightGBM selected 11 (FINAL, stored model)",0.7325,0.4221,0.3316,-0.0191,0.786
