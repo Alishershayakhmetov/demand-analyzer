@@ -14,7 +14,7 @@ Demand forecasting and purchase planning for a small shop. Course project, *AI E
 | SHAP, ablation | done |
 | Feature selection on dev folds | done (lean 11-feature set chosen by the rule) |
 | Inventory simulator and purchase policies | done (frontier comparison, no profit claim) |
-| Streamlit app | not started |
+| Streamlit app | done (demo + CSV upload, RU/EN) |
 | Test fold evaluation | **not run on purpose**, to be opened once at the end |
 
 ## Data
@@ -205,6 +205,33 @@ Reading it honestly:
 - The choice depends on the design with Sunday origins, where horizon step h is the only weekday signal. A model used on
   other weekdays needs training origins on all weekdays plus the weekday feature; selection should be repeated then.
 
+## App (`app/streamlit_app.py`, `src/demand/serving.py`)
+
+```bash
+.venv/Scripts/python scripts/14_train_final.py     # ~1 min: final model, z calibration, test-window forecast
+.venv/Scripts/streamlit run app/streamlit_app.py
+```
+
+Input: a CSV with one row per item and day (date, item, units sold; an optional price column) and optionally a stock CSV
+(`item_id, on_hand, on_order`). The sidebar has a demo (M5 store CA_1 up to d1941, with synthetic stock) and an upload mode with
+column mapping. Output: a 28-day forecast per item (daily chart and weekly table), a weekly purchase plan (target level =
+forecast over lead time + 7 days + z x sigma, order = target - stock - on order), a CSV download, a quality tab with the
+precomputed backtest tables and the limits. Russian and English interface. Forecasts are computed live from the uploaded data;
+only the tables on the quality tab are precomputed.
+
+How it is wired:
+- The model is the selected 11-feature LightGBM trained with origins up to d1913 (days <= d1941); features come from the
+  same `build_rows` code as in training, and `tests/test_serving.py` checks that served and training features are identical.
+- The target service level (90 / 95 / 98%) is converted to z with the fill-rate curve measured on the M5 backtests for the
+  chosen lead time (1, 3, 7 days; z = 1 gives about 95%). On other data the real service level may differ.
+- History is cut at the last Sunday (the model only saw Sunday origins). New items (< 28 days) get their average so far;
+  items with no sale in 28 days are flagged and not planned. Odd rows (bad dates, negatives, duplicates) are reported.
+- The demo shows no data after d1941, and `reports/test_window_forecast.csv` holds this model's forecast for d1942..d1969,
+  written before the test fold is scored; `models/meta.json` stores the model's SHA-256.
+- The app follows the recent weeks closely: on synthetic stationary demand a random +20% week raised the forecast by a similar amount.
+- Checked: unit tests, a headless run of the app (demo, language and parameter changes, a custom CSV with other column
+  names and a Wednesday end), and the demo in the browser pane. Not checked: an upload of a real shop's data.
+
 ## Run
 
 ```bash
@@ -223,6 +250,8 @@ py -3.12 -m venv .venv
 .venv/Scripts/python scripts/11_shap.py
 .venv/Scripts/python scripts/12_ablation.py            # ~10 min
 .venv/Scripts/python scripts/13_feature_selection.py   # ~7 min, writes reports/selected_features.json
+.venv/Scripts/python scripts/14_train_final.py         # model for the app
+.venv/Scripts/streamlit run app/streamlit_app.py
 .venv/Scripts/python -m unittest discover -s tests
 ```
 

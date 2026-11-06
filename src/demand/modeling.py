@@ -41,6 +41,12 @@ def window_metrics(m: Matrices, cutoff: int, forecast: np.ndarray) -> dict[str, 
 
 def inventory_days(m: Matrices, rolls: dict[int, list[np.ndarray]], folds: list[int], lead: int = LEAD, target: float = TARGET) -> float:
     """Average inventory (days of sales) for a revenue-weighted fill rate of `target`; weekly refresh, order-up-to policy."""
+    fill, inv = inventory_frontier(m, rolls, folds, lead)
+    return inventory_at_fill(fill, inv, target)
+
+
+def inventory_frontier(m: Matrices, rolls: dict[int, list[np.ndarray]], folds: list[int], lead: int = LEAD) -> tuple[np.ndarray, np.ndarray]:
+    """Fill rate and average inventory (days of sales) for every z in Z, pooled over `folds`."""
     span = lead + 7
     sold = stock = np.zeros(len(Z))
     dem = 0.0
@@ -56,4 +62,4 @@ def inventory_days(m: Matrices, rolls: dict[int, list[np.ndarray]], folds: list[
         sold = sold + (s * w).sum(axis=1)
         stock = stock + (k * w).sum(axis=1)
         dem += (actual[:, lead:].sum(axis=1) * w).sum()
-    return inventory_at_fill(sold / dem, stock / dem, target)
+    return sold / dem, stock / dem
