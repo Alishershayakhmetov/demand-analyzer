@@ -283,6 +283,11 @@ How it is wired:
   items with no sale in 28 days are flagged and not planned. Odd rows (bad dates, negatives, duplicates) are reported.
 - The demo shows no data after d1941, and `reports/test_window_forecast.csv` holds this model's forecast for d1942..d1969,
   written before the test fold is scored; `models/meta.json` stores the model's SHA-256.
+- The forecast is nearly flat from week to week by design: on the demo store the median change between week 2 and week 1 is -1.3%
+  (week 4 vs week 1: -2.0%, 90th percentile of the absolute change below 10%), while real weekly sales of the same items change by
+  a median 50%. The selected model has no calendar, price or trend inputs, only the recent level and the weekday pattern.
+  Daily values are expected demand, so 99% of them are fractional (56% are below 1 unit); the weekly table is rounded.
+  Lead time and service level only affect the purchase plan and the per-item recommendation, not the forecast chart.
 - The app follows the recent weeks closely: on synthetic stationary demand a random +20% week raised the forecast by a similar amount.
 - Checked: unit tests, a headless run of the app (demo, language and parameter changes, a custom CSV with other column
   names and a Wednesday end), and the demo in the browser pane. Not checked: an upload of a real shop's data.

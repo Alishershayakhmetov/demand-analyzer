@@ -38,6 +38,15 @@ TXT = {
         "st_ok": "ок", "st_new": "новый (<28 дней)", "st_dormant": "нет продаж 28 дней",
         "cols": {"item_id": "Товар", "status": "Статус", "forecast_next_7d": "Прогноз 7 дн.", "target_level": "Целевой уровень",
                  "safety_stock": "Страх. запас", "on_hand": "Остаток", "on_order": "В пути", "order_qty": "Заказать", "order_value": "Сумма"},
+        "chart_note": "Линия справа: ожидаемый (средний) спрос в день, поэтому значения дробные: 0,6 значит «в среднем 6 продаж за 10 дней». "
+                      "Срок поставки и уровень обслуживания на этот график не влияют: они меняют только рекомендацию ниже и вкладку «План закупок».",
+        "item_plan": "Рекомендация по товару (срок поставки {lead} дн., обслуживание {service}%)",
+        "m_target": "Целевой уровень, шт.", "m_onhand": "Остаток, шт.", "m_onorder": "В пути, шт.", "m_order": "Заказать, шт.",
+        "week_actual": "факт", "week_forecast": "прогноз", "kind": "Тип",
+        "flat_note": "Почему недели почти одинаковы: модель прогнозирует текущий уровень продаж и привычный рисунок по дням недели. "
+                     "Тренда, праздников, акций и цен она не знает (на проверках такие признаки не улучшали точность), поэтому прогноз "
+                     "меняется от недели к неделе лишь на 1–2% в среднем, а реальные недельные продажи колеблются на десятки процентов. "
+                     "Новые продажи учитываются при следующей загрузке данных: прогноз пересчитывается каждую неделю.",
         "quality_note": "Таблицы ниже посчитаны заранее на исторических окнах M5 (не на ваших данных).",
         "quality_tbl": "Проверка выбранной модели на фолде d1913 (после выбора признаков по dev-фолдам)",
         "test_tbl": "Итоговое тестовое окно d1942–1969 (оценено один раз; ошибка выше, чем на прежних окнах)",
@@ -75,6 +84,15 @@ TXT = {
         "st_ok": "ok", "st_new": "new (<28 days)", "st_dormant": "no sales for 28 days",
         "cols": {"item_id": "Item", "status": "Status", "forecast_next_7d": "Forecast 7d", "target_level": "Target level",
                  "safety_stock": "Safety stock", "on_hand": "On hand", "on_order": "On order", "order_qty": "Order", "order_value": "Value"},
+        "chart_note": "The line on the right is the expected (average) demand per day, so values are fractional: 0.6 means 'about 6 sales in 10 days'. "
+                      "Lead time and service level do not change this chart: they only change the recommendation below and the Purchase plan tab.",
+        "item_plan": "Recommendation for this item (lead time {lead} d, service {service}%)",
+        "m_target": "Target level, units", "m_onhand": "On hand, units", "m_onorder": "On order, units", "m_order": "Order, units",
+        "week_actual": "actual", "week_forecast": "forecast", "kind": "Type",
+        "flat_note": "Why the weeks look alike: the model forecasts the current sales level and the usual weekday pattern. "
+                     "It does not know about trend, holidays, promotions or prices (such features did not improve accuracy in the checks), so the forecast "
+                     "changes from week to week by only 1-2% on average, while real weekly sales swing by tens of percent. "
+                     "New sales are used the next time data is uploaded: the forecast is recomputed every week.",
         "quality_note": "The tables below were computed in advance on historical M5 windows (not on your data).",
         "quality_tbl": "Check of the selected model on fold d1913 (after feature selection on the dev folds)",
         "test_tbl": "Final test window d1942-1969 (scored once; errors are higher than on the earlier windows)",
@@ -208,11 +226,30 @@ def main() -> None:
         hist = pd.Series(shop.Y[i, -84:], index=shop.dates[-84:], name=t["hist_series"])
         fut = pd.Series(f[i], index=pd.date_range(first_forecast, periods=C.HORIZON), name=t["fc_series"])
         st.subheader(t["daily"])
+        st.caption(t["chart_note"])
         st.line_chart(pd.concat([hist, fut], axis=1), height=320)
-        weekly = pd.DataFrame({t["week"]: [f"{first_forecast + pd.Timedelta(days=7 * w):%Y-%m-%d}" for w in range(4)],
-                               t["units"]: [round(float(f[i, 7 * w:7 * w + 7].sum()), 1) for w in range(4)]})
+
+        row = plan.iloc[i]
+        st.subheader(t["item_plan"].format(lead=lead, service=service))
+        r1, r2, r3, r4 = st.columns(4)
+        r1.metric(t["m_target"], f"{row.target_level:,.0f}")
+        r2.metric(t["m_onhand"], f"{row.on_hand:,.0f}")
+        r3.metric(t["m_onorder"], f"{row.on_order:,.0f}")
+        r4.metric(t["m_order"], f"{int(row.order_qty):,}")
+
+        past = shop.Y[i, -28:].reshape(4, 7).sum(axis=1)
+        ahead = f[i].reshape(4, 7).sum(axis=1)
+        starts = [first_forecast + pd.Timedelta(days=7 * (w - 4)) for w in range(8)]
+        labels = [f"{s:%m-%d}" for s in starts]
+        bars = pd.DataFrame({t["week_actual"]: [*past, *[np.nan] * 4], t["week_forecast"]: [*[np.nan] * 4, *ahead]}, index=labels)
         st.subheader(t["weekly"])
-        st.dataframe(weekly, hide_index=True, width=360)
+        st.bar_chart(bars, height=240)
+        fmt = lambda v: f"{v:,.0f}" if v >= 10 else f"{v:.1f}"  # noqa: E731
+        weekly = pd.DataFrame({t["week"]: [f"{s:%Y-%m-%d}" for s in starts],
+                               t["kind"]: [*[t["week_actual"]] * 4, *[t["week_forecast"]] * 4],
+                               t["units"]: [fmt(v) for v in [*past, *ahead]]})
+        st.dataframe(weekly, hide_index=True, width=420)
+        st.info(t["flat_note"])
 
     with tab_plan:
         todo = plan[plan.order_qty > 0]
