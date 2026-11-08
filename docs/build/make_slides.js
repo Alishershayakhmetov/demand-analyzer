@@ -10,10 +10,10 @@ const OUT = path.join(ROOT, "docs", "Demand_Copilot_slides.pptx");
 
 const THEME = {
   name: "DemandCopilot", headFontFace: "Cambria", bodyFontFace: "Calibri",
-  colors: { dk1: "0F2A3D", lt1: "FFFFFF", dk2: "5B6B75", lt2: "F1F5F6", accent1: "1F8A8A", accent2: "E0902A", accent3: "A8B3BA",
-            accent4: "7C8B94", accent5: "B8483A", accent6: "2F6F8F", hlink: "1F8A8A", folHlink: "5B6B75" },
+  colors: { dk1: "1F2D45", lt1: "FFFFFF", dk2: "5D6B82", lt2: "EEF2F8", accent1: "3A6EA5", accent2: "E8765B", accent3: "C5D0DE",
+            accent4: "7A8CA5", accent5: "C8472E", accent6: "238A70", hlink: "3A6EA5", folHlink: "5D6B82" },
 };
-const HEX = { ink: "0F2A3D", teal: "1F8A8A", amber: "E0902A", slate: "5B6B75", light: "A8B3BA", grid: "E3E8EB", brick: "B8483A" };
+const HEX = { ink: "1F2D45", blue: "3A6EA5", coral: "E8765B", slate: "5D6B82", light: "C5D0DE", grid: "DDE4EE", brick: "C8472E" };
 
 const pres = new pptxgen();
 pres.layout = "LAYOUT_16x9";
@@ -29,9 +29,9 @@ pres.defineSlideMaster({
     bold: true, color: C.text1, align: "left", valign: "middle", margin: 0 }, text: "" } }],
 });
 pres.defineSlideMaster({
-  title: "DARK", background: { color: HEX.ink },
+  title: "LIGHTTITLE", background: { color: "EEF2F8" },
   objects: [{ placeholder: { options: { name: "title", type: "title", x: 0.6, y: 0.4, w: 8.8, h: 0.9, fontFace: "Cambria", fontSize: 28,
-    bold: true, color: C.background1, align: "left", valign: "middle", margin: 0 }, text: "" } }],
+    bold: true, color: C.text1, align: "left", valign: "middle", margin: 0 }, text: "" } }],
 });
 
 const body = { fontFace: "Calibri", color: C.text1, margin: 0, isTextBox: true, valign: "top" };
@@ -40,7 +40,7 @@ const content = (title, section) => {
   s.addText(title, { placeholder: "title" });
   return s;
 };
-const card = (s, x, y, w, h, name) => s.addShape(pres.ShapeType.roundRect, { x, y, w, h, rectRadius: 0.08, fill: { color: C.background2 }, line: { color: C.background2, width: 0 }, objectName: name });
+const card = (s, x, y, w, h, name, fill = C.background2) => s.addShape(pres.ShapeType.roundRect, { x, y, w, h, rectRadius: 0.08, fill: { color: fill }, line: { color: HEX.grid, width: 0.75 }, objectName: name });
 const bullets = (items, size = 14, after = 6) => items.map((t, i) => ({ text: t, options: { bullet: true, breakLine: i < items.length - 1, fontSize: size, paraSpaceAfter: after } }));
 const pct = (a, b) => `${a / b - 1 >= 0 ? "+" : "−"}${Math.abs((a / b - 1) * 100).toFixed(1)}%`;
 const W = NUM.wape, I = NUM.inventory;
@@ -48,14 +48,14 @@ const W = NUM.wape, I = NUM.inventory;
 // 1. Title
 pres.addSection({ title: "Введение" });
 {
-  const s = pres.addSlide({ masterName: "DARK", sectionTitle: "Введение" });
-  s.addShape(pres.ShapeType.ellipse, { x: 6.6, y: 0.5, w: 3.4, h: 3.4, fill: { color: C.accent1, transparency: 35 }, line: { color: C.accent1, width: 0 }, objectName: "Круг 1" });
-  s.addShape(pres.ShapeType.ellipse, { x: 8.0, y: 2.5, w: 2.4, h: 2.4, fill: { color: C.accent2, transparency: 25 }, line: { color: C.accent2, width: 0 }, objectName: "Круг 2" });
-  s.addShape(pres.ShapeType.ellipse, { x: 5.7, y: 3.3, w: 1.6, h: 1.6, fill: { color: C.accent3, transparency: 55 }, line: { color: C.accent3, width: 0 }, objectName: "Круг 3" });
-  s.addText("Demand Copilot", { x: 0.6, y: 1.2, w: 6.2, h: 0.9, fontFace: "Cambria", fontSize: 44, bold: true, color: C.background1, margin: 0, isTextBox: true });
-  s.addText("Прогноз спроса и план закупок для малого магазина", { x: 0.6, y: 2.2, w: 5.6, h: 0.9, fontFace: "Calibri", fontSize: 22, color: C.background2, margin: 0, isTextBox: true, valign: "top" });
-  s.addText("AI Essentials: Theory and Applications · финальный проект", { x: 0.6, y: 3.7, w: 6, h: 0.35, fontFace: "Calibri", fontSize: 14, color: C.accent3, margin: 0, isTextBox: true });
-  s.addText("[Имя Фамилия] · [Имя Фамилия] · [Имя Фамилия]", { x: 0.6, y: 4.1, w: 6, h: 0.35, fontFace: "Calibri", fontSize: 16, bold: true, color: C.background1, margin: 0, isTextBox: true });
+  const s = pres.addSlide({ masterName: "LIGHTTITLE", sectionTitle: "Введение" });
+  s.addShape(pres.ShapeType.ellipse, { x: 6.6, y: 0.5, w: 3.4, h: 3.4, fill: { color: C.accent1, transparency: 72 }, line: { color: C.accent1, width: 0 }, objectName: "Круг 1" });
+  s.addShape(pres.ShapeType.ellipse, { x: 8.0, y: 2.5, w: 2.4, h: 2.4, fill: { color: C.accent2, transparency: 55 }, line: { color: C.accent2, width: 0 }, objectName: "Круг 2" });
+  s.addShape(pres.ShapeType.ellipse, { x: 5.7, y: 3.3, w: 1.6, h: 1.6, fill: { color: C.accent3, transparency: 45 }, line: { color: C.accent3, width: 0 }, objectName: "Круг 3" });
+  s.addText("Demand Copilot", { x: 0.6, y: 1.2, w: 6.2, h: 0.9, fontFace: "Cambria", fontSize: 44, bold: true, color: C.text1, margin: 0, isTextBox: true });
+  s.addText("Прогноз спроса и план закупок для малого магазина", { x: 0.6, y: 2.2, w: 5.6, h: 0.9, fontFace: "Calibri", fontSize: 22, color: C.text2, margin: 0, isTextBox: true, valign: "top" });
+  s.addText("AI Essentials: Theory and Applications · финальный проект", { x: 0.6, y: 3.7, w: 6, h: 0.35, fontFace: "Calibri", fontSize: 14, color: C.text2, margin: 0, isTextBox: true });
+  s.addText("[Имя Фамилия] · [Имя Фамилия] · [Имя Фамилия]", { x: 0.6, y: 4.1, w: 6, h: 0.35, fontFace: "Calibri", fontSize: 16, bold: true, color: C.text1, margin: 0, isTextBox: true });
   s.addNotes("~15 с. Представьтесь, назовите тему. Проект: система, которая по истории продаж магазина прогнозирует спрос на 28 дней и предлагает недельный план закупок. Дальше: задача, данные, метод, честные результаты, демо.");
 }
 
@@ -105,7 +105,7 @@ pres.addSection({ title: "Задача и данные" });
 {
   const s = content("Проверка: по времени, тест открыт один раз", "Задача и данные");
   const y = 1.55, h = 0.8;
-  const segs = [["обучение", 0.5, 4.2, HEX.slate, "FFFFFF"], ["dev ×3", 4.75, 1.75, HEX.teal, "FFFFFF"], ["val", 6.55, 0.95, HEX.accent2 || HEX.amber, "0F2A3D"], ["тест", 7.55, 1.95, HEX.brick, "FFFFFF"]];
+  const segs = [["обучение", 0.5, 4.2, "9FB1C9", "1F2D45"], ["dev ×3", 4.75, 1.75, HEX.blue, "FFFFFF"], ["val", 6.55, 0.95, "238A70", "FFFFFF"], ["тест", 7.55, 1.95, HEX.brick, "FFFFFF"]];
   segs.forEach(([t, x, w, fill, tc], i) => {
     s.addShape(pres.ShapeType.rect, { x, y, w, h, fill: { color: fill }, line: { color: "FFFFFF", width: 1 }, objectName: `Отрезок ${i + 1}` });
     s.addText(t, { x, y, w, h, fontFace: "Calibri", fontSize: 16, bold: true, color: tc, align: "center", valign: "middle", margin: 0, isTextBox: true });
@@ -150,7 +150,7 @@ pres.addSection({ title: "Метод и результаты" });
 {
   const s = content("Прогноз лучше seasonal naive, но не лучше среднего", "Метод и результаты");
   const cats = ["dev (3 окна)", "validation d1913", "тест d1942–1969"];
-  const series = [["seasonal naive", "seasonal naive", "C5CED3"], ["28-day average", "среднее за 28 дней", HEX.slate], ["ETS", "ETS", HEX.amber], ["LightGBM (selected)", "LightGBM", HEX.teal]];
+  const series = [["seasonal naive", "seasonal naive", "C5D0DE"], ["28-day average", "среднее за 28 дней", HEX.slate], ["ETS", "ETS", HEX.coral], ["LightGBM (selected)", "LightGBM", HEX.blue]];
   s.addChart(pres.charts.BAR, series.map(([k, name]) => ({ name, labels: cats, values: [W[k].dev, W[k].val, W[k].test].map((v) => +v.toFixed(3)) })), {
     x: 0.4, y: 1.35, w: 6.0, h: 3.8, barDir: "col", barGrouping: "clustered", chartColors: series.map((x) => x[2]),
     showTitle: true, title: "Недельный WAPE, ниже — лучше", titleFontSize: 13, titleColor: HEX.ink, titleFontFace: "+mn-lt",
@@ -178,7 +178,7 @@ pres.addSection({ title: "Метод и результаты" });
   s.addChart(pres.charts.BAR, [
     { name: "среднее за 28 дней", labels: cats, values: [0.3846, 0.5206, 0.5908] },
     { name: "LightGBM", labels: cats, values: [0.3843, 0.4898, 0.6037] }], {
-    x: 0.4, y: 1.35, w: 4.9, h: 3.8, barDir: "col", barGrouping: "clustered", chartColors: [HEX.slate, HEX.teal],
+    x: 0.4, y: 1.35, w: 4.9, h: 3.8, barDir: "col", barGrouping: "clustered", chartColors: [HEX.slate, HEX.blue],
     showTitle: true, title: "Тест: недельный WAPE по группам объёма", titleFontSize: 13, titleColor: HEX.ink, titleFontFace: "+mn-lt",
     showLegend: true, legendPos: "b", legendFontSize: 11, legendFontFace: "+mn-lt", legendColor: HEX.ink,
     showValue: true, dataLabelFontSize: 10, dataLabelFormatCode: "0.00", dataLabelPosition: "outEnd", dataLabelColor: HEX.ink, dataLabelFontFace: "+mn-lt",
@@ -203,7 +203,7 @@ pres.addSection({ title: "Метод и результаты" });
   s.addChart(pres.charts.BAR, [
     { name: "4 прежних окна", labels: cats, values: keys.map((k) => +I[k].earlier.toFixed(2)) },
     { name: "тест", labels: cats, values: keys.map((k) => +I[k].test.toFixed(2)) }], {
-    x: 0.4, y: 1.35, w: 5.3, h: 3.8, barDir: "col", barGrouping: "clustered", chartColors: [HEX.slate, HEX.teal],
+    x: 0.4, y: 1.35, w: 5.3, h: 3.8, barDir: "col", barGrouping: "clustered", chartColors: [HEX.slate, HEX.blue],
     showTitle: true, title: "Запас, дней продаж (95% обслуживания, поставка 3 дня)", titleFontSize: 12, titleColor: HEX.ink, titleFontFace: "+mn-lt",
     showLegend: true, legendPos: "b", legendFontSize: 11, legendFontFace: "+mn-lt", legendColor: HEX.ink,
     showValue: true, dataLabelFontSize: 10, dataLabelFormatCode: "0.0", dataLabelPosition: "outEnd", dataLabelColor: HEX.ink, dataLabelFontFace: "+mn-lt",
@@ -225,8 +225,8 @@ pres.addSection({ title: "Метод и результаты" });
 {
   const s = content("Тест: три гипотезы, заданные до запуска", "Метод и результаты");
   const cell = (t, o = {}) => ({ text: t, options: { fontFace: "Calibri", fontSize: 13, color: C.text1, valign: "middle", ...o } });
-  const head = (t) => cell(t, { bold: true, color: C.background1, fill: { color: C.text1 }, fontSize: 13 });
-  const ok = (t) => cell(t, { bold: true, color: C.background1, fill: { color: C.accent1 }, align: "center" });
+  const head = (t) => cell(t, { bold: true, color: C.background1, fill: { color: C.accent1 }, fontSize: 13 });
+  const ok = (t) => cell(t, { bold: true, color: C.background1, fill: { color: C.accent6 }, align: "center" });
   const no = (t) => cell(t, { bold: true, color: C.background1, fill: { color: C.accent5 }, align: "center" });
   const rows = [
     [head("Гипотеза"), head("Результат"), head("Итог")],
@@ -264,16 +264,18 @@ pres.addSection({ title: "Метод и результаты" });
 pres.addSection({ title: "Демо и итоги" });
 {
   const s = content("Демо: загрузил продажи — получил план", "Демо и итоги");
-  const imgH = 3.75, imgW = imgH * 800 / 938;
-  s.addImage({ path: path.join(ROOT, "docs", "assets", "app_forecast.jpg"), x: 0.5, y: 1.4, w: imgW, h: imgH, altText: "Окно приложения: прогноз по товару, рекомендация и недельный график факта и прогноза" });
-  const steps = [["Загрузить CSV", "дата, товар, продажи; или открыть демо на данных M5"], ["Выбрать параметры", "срок поставки и целевой уровень обслуживания"], ["Посмотреть товар", "прогноз по дням, неделям и рекомендация к заказу"], ["Скачать план", "таблица закупок в CSV"]];
+  const imgH = 3.3;
+  s.addImage({ path: path.join(ROOT, "docs", "assets", "app_forecast.jpg"), x: 0.5, y: 1.4, w: imgH * 800 / 882, h: imgH, altText: "Окно приложения: прогноз по товару, рекомендация и недельный график факта и прогноза; справа панель параметров" });
+  s.addImage({ path: path.join(ROOT, "docs", "assets", "app_plan_crop.jpg"), x: 0.5 + imgH * 800 / 882 + 0.2, y: 1.4, w: imgH * 550 / 570, h: imgH, altText: "Вкладка «План закупок»: показатели и таблица заказа по товарам" });
+  s.addText("Прогноз по товару", { ...body, x: 0.5, y: 4.75, w: 3.0, h: 0.3, fontSize: 12, color: C.text2 });
+  s.addText("План закупок", { ...body, x: 0.5 + imgH * 800 / 882 + 0.2, y: 4.75, w: 3.0, h: 0.3, fontSize: 12, color: C.text2 });
+  const steps = [["Загрузить CSV", "или открыть демо на данных M5"], ["Выбрать параметры", "срок поставки, обслуживание"], ["Смотреть товар", "прогноз и рекомендация"], ["Скачать план", "таблица закупок в CSV"]];
   steps.forEach(([h1, t], i) => {
-    const y = 1.4 + i * 0.95;
-    s.addShape(pres.ShapeType.ellipse, { x: 4.6, y: y + 0.1, w: 0.5, h: 0.5, fill: { color: C.accent1 }, line: { color: C.accent1, width: 0 }, objectName: `Шаг ${i + 1}` });
-    s.addText(String(i + 1), { x: 4.6, y: y + 0.1, w: 0.5, h: 0.5, fontFace: "Calibri", fontSize: 16, bold: true, color: C.background1, align: "center", valign: "middle", margin: 0, isTextBox: true });
-    s.addText([{ text: h1, options: { bold: true, fontSize: 16, color: C.accent1, breakLine: true } }, { text: t, options: { fontSize: 14 } }], { ...body, x: 5.3, y, w: 4.2, h: 0.8 });
+    const y = 1.4 + i * 0.92;
+    s.addShape(pres.ShapeType.ellipse, { x: 7.1, y: y + 0.08, w: 0.45, h: 0.45, fill: { color: C.accent1 }, line: { color: C.accent1, width: 0 }, objectName: `Шаг ${i + 1}` });
+    s.addText(String(i + 1), { x: 7.1, y: y + 0.08, w: 0.45, h: 0.45, fontFace: "Calibri", fontSize: 15, bold: true, color: C.background1, align: "center", valign: "middle", margin: 0, isTextBox: true });
+    s.addText([{ text: h1, options: { bold: true, fontSize: 15, color: C.accent1, breakLine: true } }, { text: t, options: { fontSize: 14 } }], { ...body, x: 7.7, y, w: 1.85, h: 0.85 });
   });
-  s.addText("Прогноз считается на лету по загруженным данным", { ...body, x: 4.6, y: 4.95, w: 4.4, h: 0.3, fontSize: 12, color: C.text2 });
   s.addNotes("Демо ~5 мин (см. сценарий в отчёте). Запуск: streamlit run app/streamlit_app.py (порт 8501). На слайде — скриншот на случай сбоя. Шаги: открыть демо; показать данные и проверку; выбрать товар; показать график и рекомендацию; изменить срок поставки до 7 дней и уровень до 98% и показать, как меняется рекомендация; открыть вкладку плана закупок и скачать CSV; показать вкладку ограничений.");
 }
 
@@ -301,14 +303,14 @@ pres.addSection({ title: "Демо и итоги" });
 
 // 13. Closing
 {
-  const s = pres.addSlide({ masterName: "DARK", sectionTitle: "Демо и итоги" });
+  const s = pres.addSlide({ masterName: "LIGHTTITLE", sectionTitle: "Демо и итоги" });
   s.addText("Итоги", { placeholder: "title" });
   s.addText(bullets([
     "Собрана вся цепочка: данные, прогноз, закупки, приложение.",
     "Проверка честная: тест открыт один раз, итог скромный: выигрыш над простым средним мал и нестабилен.",
     "Дальше: данные реального магазина, остатки и акции.",
-  ], 16, 10).map((r) => ({ ...r, options: { ...r.options, color: C.background1 } })), { x: 0.6, y: 1.5, w: 4.7, h: 3.3, fontFace: "Calibri", margin: 0, isTextBox: true, valign: "top" });
-  card(s, 5.6, 1.5, 3.8, 2.6, "Вклад участников");
+  ], 16, 10).map((r) => ({ ...r, options: { ...r.options, color: C.text1 } })), { x: 0.6, y: 1.5, w: 4.7, h: 3.3, fontFace: "Calibri", margin: 0, isTextBox: true, valign: "top" });
+  card(s, 5.6, 1.5, 3.8, 2.6, "Вклад участников", C.background1);
   s.addText("Вклад участников", { ...body, x: 5.75, y: 1.6, w: 3.5, h: 0.35, fontSize: 16, bold: true, color: C.accent1 });
   s.addText([
     { text: "[Имя Фамилия]", options: { bold: true, fontSize: 14, breakLine: true } },
@@ -318,7 +320,7 @@ pres.addSection({ title: "Демо и итоги" });
     { text: "[Имя Фамилия]", options: { bold: true, fontSize: 14, breakLine: true } },
     { text: "[приложение, инженерия, отчёт]", options: { fontSize: 13, color: C.text2 } },
   ], { ...body, x: 5.75, y: 2.05, w: 3.5, h: 2.7 });
-  s.addText("Вопросы?", { x: 0.6, y: 4.75, w: 4.7, h: 0.5, fontFace: "Cambria", fontSize: 24, bold: true, color: C.accent2, margin: 0, isTextBox: true });
+  s.addText("Вопросы?", { x: 0.6, y: 4.75, w: 4.7, h: 0.5, fontFace: "Cambria", fontSize: 24, bold: true, color: C.accent5, margin: 0, isTextBox: true });
   s.addNotes("~20 с. Итог: собрана вся цепочка и проверена честно. Скромный результат — тоже результат: мы знаем, где выигрыш есть, а где нет. Заполните вклад участников и переходите к вопросам.");
 }
 

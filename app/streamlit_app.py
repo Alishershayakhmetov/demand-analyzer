@@ -135,12 +135,28 @@ def guess(columns, words, default=0):
     return default
 
 
+HIST_COLOR, FC_COLOR = "#9FB1C9", "#3A6EA5"
+# Fallback for the Streamlit toolbar (Deploy button and main menu); client.toolbarMode in .streamlit/config.toml does the same.
+HIDE_CHROME = """<style>
+[data-testid="stToolbar"], [data-testid="stDeployButton"], .stAppDeployButton, #MainMenu, footer {display: none !important;}
+[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"] {display: none !important;}
+</style>"""
+
+
 def main() -> None:
-    st.set_page_config(page_title="Demand Copilot", page_icon="📦", layout="wide")
-    lang = st.sidebar.radio("Language / Язык", ["ru", "en"], horizontal=True)
+    st.set_page_config(page_title="Demand Copilot", page_icon="📦", layout="wide", initial_sidebar_state="collapsed")
+    st.markdown(HIDE_CHROME, unsafe_allow_html=True)
+    left, right = st.columns([3.2, 1], gap="large")  # the controls are a plain panel on the right, not a collapsible sidebar
+    panel = right.container(border=True)
+    lang = panel.radio("Language / Язык", ["ru", "en"], horizontal=True)
     t = TXT[lang]
-    st.title(t["title"])
-    st.caption(t["intro"])
+    with left:
+        st.title(t["title"])
+        st.caption(t["intro"])
+        render(t, panel)
+
+
+def render(t: dict, panel) -> None:
     try:
         booster, meta = get_model()
     except Exception:
@@ -148,8 +164,8 @@ def main() -> None:
         st.stop()
     calibration = meta["calibration"]
 
-    st.sidebar.header(t["source"])
-    source = st.sidebar.radio(t["source"], [t["demo"], t["upload"]], label_visibility="collapsed")
+    panel.subheader(t["source"])
+    source = panel.radio(t["source"], [t["demo"], t["upload"]], label_visibility="collapsed")
     stock_df = None
     if source == t["demo"]:
         if not (C.PROC / f"panel_{C.STORE}.parquet").exists():
@@ -157,29 +173,29 @@ def main() -> None:
             st.stop()
         df = demo_table()
         cols = dict(date_col="date", item_col="item_id", sales_col="sales", price_col="sell_price")
-        use_synthetic_stock = st.sidebar.checkbox(t["demo_stock"], value=True)
+        use_synthetic_stock = panel.checkbox(t["demo_stock"], value=True)
     else:
-        up = st.sidebar.file_uploader(t["file"], type=["csv"])
+        up = panel.file_uploader(t["file"], type=["csv"])
         if up is None:
             st.info(t["no_data"])
             st.stop()
         df = pd.read_csv(up)
         c = list(df.columns)
         cols = dict(
-            date_col=st.sidebar.selectbox(t["col_date"], c, guess(c, ["date", "day", "дата"])),
-            item_col=st.sidebar.selectbox(t["col_item"], c, guess(c, ["item", "sku", "product", "товар"], 1 % len(c))),
-            sales_col=st.sidebar.selectbox(t["col_sales"], c, guess(c, ["sale", "qty", "unit", "quant", "прод"], 2 % len(c))))
-        price = st.sidebar.selectbox(t["col_price"], [t["none"], *c], 0)
+            date_col=panel.selectbox(t["col_date"], c, guess(c, ["date", "day", "дата"])),
+            item_col=panel.selectbox(t["col_item"], c, guess(c, ["item", "sku", "product", "товар"], 1 % len(c))),
+            sales_col=panel.selectbox(t["col_sales"], c, guess(c, ["sale", "qty", "unit", "quant", "прод"], 2 % len(c))))
+        price = panel.selectbox(t["col_price"], [t["none"], *c], 0)
         cols["price_col"] = None if price == t["none"] else price
         use_synthetic_stock = False
-        stock_up = st.sidebar.file_uploader(t["stock_file"], type=["csv"])
+        stock_up = panel.file_uploader(t["stock_file"], type=["csv"])
         if stock_up is not None:
             stock_df = pd.read_csv(stock_up)
 
-    st.sidebar.header(t["params"])
-    lead = st.sidebar.selectbox(t["lead"], [1, 3, 7], index=1)
-    service = st.sidebar.selectbox(t["service"], [90, 95, 98], index=1, help=t["service_help"])
-    st.sidebar.caption(t["review"])
+    panel.subheader(t["params"])
+    lead = panel.selectbox(t["lead"], [1, 3, 7], index=1)
+    service = panel.selectbox(t["service"], [90, 95, 98], index=1, help=t["service_help"])
+    panel.caption(t["review"])
 
     try:
         shop, f = compute(df, **cols)
@@ -227,7 +243,7 @@ def main() -> None:
         fut = pd.Series(f[i], index=pd.date_range(first_forecast, periods=C.HORIZON), name=t["fc_series"])
         st.subheader(t["daily"])
         st.caption(t["chart_note"])
-        st.line_chart(pd.concat([hist, fut], axis=1), height=320)
+        st.line_chart(pd.concat([hist, fut], axis=1), height=320, color=[HIST_COLOR, FC_COLOR])
 
         row = plan.iloc[i]
         st.subheader(t["item_plan"].format(lead=lead, service=service))
@@ -243,7 +259,7 @@ def main() -> None:
         labels = [f"{s:%m-%d}" for s in starts]
         bars = pd.DataFrame({t["week_actual"]: [*past, *[np.nan] * 4], t["week_forecast"]: [*[np.nan] * 4, *ahead]}, index=labels)
         st.subheader(t["weekly"])
-        st.bar_chart(bars, height=240)
+        st.bar_chart(bars, height=240, color=[HIST_COLOR, FC_COLOR])
         fmt = lambda v: f"{v:,.0f}" if v >= 10 else f"{v:.1f}"  # noqa: E731
         weekly = pd.DataFrame({t["week"]: [f"{s:%Y-%m-%d}" for s in starts],
                                t["kind"]: [*[t["week_actual"]] * 4, *[t["week_forecast"]] * 4],

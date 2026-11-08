@@ -9,7 +9,7 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const NUM = JSON.parse(fs.readFileSync(path.join(ROOT, "reports", "report_numbers.json"), "utf8"));
 const W = NUM.wape, I = NUM.inventory;
 const OUT = path.join(ROOT, "docs", "Demand_Copilot_report.docx");
-const INK = "0F2A3D", TEAL = "1F8A8A", SLATE = "5B6B75", GRID = "D5DCE0", LIGHT = "F1F5F6", BRICK = "B8483A";
+const INK = "1F2D45", TEAL = "3A6EA5", SLATE = "5D6B82", GRID = "DDE4EE", LIGHT = "EEF2F8", BRICK = "C8472E", GREEN = "238A70";
 const TW = 9638; // content width in DXA (A4, 2 cm margins)
 
 const f2 = (v, d = 4) => v.toFixed(d).replace(".", ",");
@@ -38,10 +38,10 @@ function table(header, rows, widths, opts = {}) {
     children: [new Paragraph({ alignment: o.align || AlignmentType.LEFT, children: [run(String(t), { size: 20, bold: !!o.bold, color: o.color })] })] });
   const align = opts.align || header.map(() => AlignmentType.LEFT);
   return new Table({ width: { size: widths.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: widths, rows: [
-    new TableRow({ tableHeader: true, cantSplit: true, children: header.map((h, i) => cell(h, widths[i], { fill: INK, bold: true, color: "FFFFFF", align: align[i] })) }),
+    new TableRow({ tableHeader: true, cantSplit: true, children: header.map((h, i) => cell(h, widths[i], { fill: TEAL, bold: true, color: "FFFFFF", align: align[i] })) }),
     ...rows.map((r, ri) => new TableRow({ cantSplit: true, children: r.map((c, i) => {
       const o = typeof c === "object" ? c : { t: c };
-      return cell(o.t, widths[i], { align: align[i], bold: o.bold || (opts.boldRow === ri), fill: o.fill || (opts.hl === ri ? "E3F1F1" : undefined), color: o.color });
+      return cell(o.t, widths[i], { align: align[i], bold: o.bold || (opts.boldRow === ri), fill: o.fill || (opts.hl === ri ? "E3EDF7" : undefined), color: o.color });
     }) })),
   ] });
 }
@@ -165,7 +165,7 @@ add(h2("4.7. Тестовое окно"));
 add(p("Окно d1942–d1969 (23.05–19.06.2016) не использовалось для обучения, настройки и выбора признаков. Скрипт оценки перед запуском проверил хеш модели, а гипотезы и правила были записаны в нём до запуска. Результат приводится как есть."));
 add(table(["Гипотеза, заданная заранее", "Результат", "Итог"],
   [["H1. Недельный WAPE минимум на 10% ниже seasonal naive", `${pct(W["LightGBM (selected)"].test, W["seasonal naive"].test)} (${f2(W["LightGBM (selected)"].test)} против ${f2(W["seasonal naive"].test)})`, { t: "не подтверждена", color: BRICK, bold: true }],
-   ["H2. Недельный WAPE не хуже среднего за 28 дней более чем на 3%", `${pct(W["LightGBM (selected)"].test, W["28-day average"].test)} (${f2(W["LightGBM (selected)"].test)} против ${f2(W["28-day average"].test)})`, { t: "подтверждена", color: TEAL, bold: true }],
+   ["H2. Недельный WAPE не хуже среднего за 28 дней более чем на 3%", `${pct(W["LightGBM (selected)"].test, W["28-day average"].test)} (${f2(W["LightGBM (selected)"].test)} против ${f2(W["28-day average"].test)})`, { t: "подтверждена", color: GREEN, bold: true }],
    ["H3. Запас при 95% обслуживания (срок поставки 3 дня) минимум на 10% меньше, чем по правилу «как на прошлой неделе», и меньше, чем по среднему за 28 дней; интервалы ниже нуля", `${pct(I.lean.test, I.owner.test)} и ${pct(I.lean.test, I.ma28.test)}; интервалы [−15%, +13%] и [−3%, +21%] включают ноль`, { t: "не подтверждена", color: BRICK, bold: true }]],
   [4638, 3200, 1800]));
 add(caption("Таблица 4. Итоги проверки гипотез на тестовом окне"));
@@ -183,8 +183,12 @@ add(bullet([{ t: "Вход: ", bold: true }, "CSV со строкой на то�
   bullet([{ t: "Проверка данных: ", bold: true }, "нечитаемые даты, отрицательные продажи и дубликаты считаются и показываются; история обрезается по последнее воскресенье; новые товары (менее 28 дней) получают среднее, товары без продаж 28 дней помечаются и не планируются."]),
   bullet([{ t: "Выход: ", bold: true }, "прогноз по дням и неделям для выбранного товара; рекомендация по товару (целевой уровень, остаток, заказать) и таблица заказа по всем товарам с выгрузкой в CSV; график факта и прогноза по неделям."]),
   bullet([{ t: "Параметры закупок: ", bold: true }, "срок поставки 1, 3 или 7 дней и целевой уровень обслуживания 90, 95 или 98%; соответствие уровня обслуживания и коэффициента z откалибровано на прежних окнах M5, на других данных реальный уровень может отличаться."]));
-add(img(fig("app_forecast.jpg"), 3.3, 3.87, "Окно приложения"));
-add(caption("Рис. 5. Приложение: прогноз по товару, рекомендация и недельный график факта и прогноза"));
+const shot = (file, wIn, hIn, alt) => new ImageRun({ type: "jpg", data: fs.readFileSync(fig(file)), transformation: { width: Math.round(wIn * 96), height: Math.round(hIn * 96) },
+  altText: { title: alt, description: alt, name: alt } });
+add(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 0 }, children: [
+  shot("app_forecast.jpg", 2.9, 3.2, "Окно приложения: прогноз по товару, рекомендация, недельный график; справа панель параметров"), run("   "),
+  shot("app_plan_crop.jpg", 2.7, 2.8, "Вкладка плана закупок")] }));
+add(caption("Рис. 5. Приложение: прогноз по товару с панелью параметров справа (слева) и план закупок (справа)"));
 add(h2("Сценарий демонстрации (5 минут)"));
 add(step("Запустить приложение: streamlit run app/streamlit_app.py, открыть http://localhost:8501. Первая загрузка занимает около 30 секунд (расчёт по 300 товарам), открыть заранее. (0:00–0:30)"),
   step("Вкладка «Прогноз»: показать проверку данных, итоговые показатели, выбрать самый продаваемый товар и показать график: история и прогноз на 28 дней. Пояснить, что значения ожидаемые, поэтому дробные. (0:30–1:30)"),

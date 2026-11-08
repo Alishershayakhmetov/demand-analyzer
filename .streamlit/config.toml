@@ -1,0 +1,14 @@
+[client]
+# "minimal" hides the Deploy button and the three-dot main menu.
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light"
+primaryColor = "#3A6EA5"
+backgroundColor = "#F7F9FC"
+secondaryBackgroundColor = "#E8EEF6"
+textColor = "#1F2D45"
+font = "sans serif"

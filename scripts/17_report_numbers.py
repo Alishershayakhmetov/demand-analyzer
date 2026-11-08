@@ -26,7 +26,7 @@ from demand.modeling import fit, inventory_by_item, predict_origins  # noqa: E40
 
 FOLDS = C.DEV_CUTOFFS + [C.VAL_CUTOFF]
 ASSETS = C.ROOT / "docs" / "assets"
-TEAL, SLATE, LIGHT, AMBER, INK = "#1F8A8A", "#5B6B75", "#A8B3BA", "#E0902A", "#0F2A3D"
+TEAL, SLATE, LIGHT, AMBER, INK = "#3A6EA5", "#5D6B82", "#C5D0DE", "#E8765B", "#1F2D45"
 
 
 def main() -> None:
@@ -89,7 +89,7 @@ def main() -> None:
     plt.rcParams.update({"font.family": "DejaVu Sans", "axes.spines.top": False, "axes.spines.right": False, "axes.edgecolor": SLATE,
                          "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "font.size": 10})
     order = ["seasonal naive", "28-day average", "weekday average 8w", "ETS", "LightGBM (selected)"]
-    colors = [LIGHT, SLATE, "#7C8B94", "#93A0A8", TEAL]
+    colors = [LIGHT, "#7A8CA5", "#9FB1C9", AMBER, TEAL]
     ru = {"seasonal naive": "seasonal naive", "28-day average": "среднее за 28 дней", "weekday average 8w": "среднее по дням недели",
           "ETS": "ETS", "LightGBM (selected)": "LightGBM"}
     fig, ax = plt.subplots(figsize=(8, 3.6))

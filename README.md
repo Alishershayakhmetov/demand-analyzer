@@ -295,7 +295,8 @@ Input: a CSV with one row per item and day (date, item, units sold; an optional 
 (`item_id, on_hand, on_order`). The sidebar has a demo (M5 store CA_1 up to d1941, with synthetic stock) and an upload mode with
 column mapping. Output: a 28-day forecast per item (daily chart and weekly table), a weekly purchase plan (target level =
 forecast over lead time + 7 days + z x sigma, order = target - stock - on order), a CSV download, a quality tab with the
-precomputed backtest tables and the limits. Russian and English interface. Forecasts are computed live from the uploaded data;
+precomputed backtest tables and the limits. Russian and English interface; light theme (`.streamlit/config.toml`), controls in a fixed panel on the right instead of a
+collapsible sidebar, and no Deploy button or main menu (`client.toolbarMode = "minimal"`, plus a CSS fallback in the app). Forecasts are computed live from the uploaded data;
 only the tables on the quality tab are precomputed.
 
 How it is wired:
