@@ -205,6 +205,30 @@ Reading it honestly:
 - The choice depends on the design with Sunday origins, where horizon step h is the only weekday signal. A model used on
   other weekdays needs training origins on all weekdays plus the weekday feature; selection should be repeated then.
 
+## Do calendar and price help once tuned? (`scripts/16_calendar_dev.py`, `reports/calendar_dev.txt`, dev folds + one look at d1913)
+
+Done after the test fold, so it cannot change the shipped model's test result; the test fold was not used. Motivation: the shipped model has no
+calendar, price or trend input and its weekly forecast is almost flat. The earlier single-group tests used default hyper-parameters, so here
+each feature set got the same tuning budget (13 configurations x 3 dev folds x 200/400/600 trees). Rules were declared in the script before the run:
+a richer set replaces the lean one only if its best dev weekly WAPE is lower by more than 0.0029 **and** it is not worse on d1913.
+
+| Feature set | best dev weekly WAPE | shipped config on dev | week-to-week change of the forecast (dev) | d1913 weekly | d1913 28-day | d1913 inventory days |
+|---|---|---|---|---|---|---|
+| shipped lean model (11, default config) | 0.3362 | | 1.9% | 0.3410 | 0.2350 | 6.46 |
+| A lean (11), tuned | **0.3343** | 0.3362 | 1.9% | 0.3395 | 0.2324 | 6.45 |
+| B lean + calendar (16), tuned | 0.3420 | 0.3460 | 3.7% | 0.3407 | 0.2303 | 6.45 |
+| C all 24, tuned | 0.3393 | 0.3425 | 4.0% | 0.3421 | 0.2315 | 6.52 |
+
+Real week-to-week change of the same items' sales: 47-48%.
+
+Verdict: **B and C do not pass the dev rule** (0.0077 and 0.0050 worse than the lean set after equal tuning), so the shipped model stays.
+Tuning the lean set gains 0.0019 on dev, below the threshold, and 0.0015 on d1913: not adopted either.
+Calendar features do make the forecast vary between weeks (4-7% instead of about 2%), but that is small next to the 47% of real sales,
+and the extra variation did not buy accuracy: on d1913 B is level with the lean model in weekly WAPE and inventory (0.3407 vs 0.3410; 6.45 vs 6.46) and
+about 1-2% better in daily and 28-day WAPE, which one fold and the dev result do not support. Most of the week-to-week swing of real sales is not
+predictable from the information used here, so a forecast that varies more by week would look livelier without being more accurate.
+d1913 had already been seen several times, so its role here is only a consistency check.
+
 ## Test fold (`scripts/15_test_fold.py`, `reports/test_results.txt`, scored once)
 
 The window d1942..d1969 (2016-05-23 to 2016-06-19) was never used for training, tuning or selection. The script declared
@@ -310,6 +334,7 @@ py -3.12 -m venv .venv
 .venv/Scripts/python scripts/11_shap.py
 .venv/Scripts/python scripts/12_ablation.py            # ~10 min
 .venv/Scripts/python scripts/13_feature_selection.py   # ~7 min, writes reports/selected_features.json
+.venv/Scripts/python scripts/16_calendar_dev.py        # ~35 min, tuned feature-set comparison on dev folds
 .venv/Scripts/python scripts/14_train_final.py         # model for the app
 .venv/Scripts/streamlit run app/streamlit_app.py
 .venv/Scripts/python -m unittest discover -s tests

@@ -15,14 +15,16 @@ Z = np.arange(-1.0, 6.01, 0.25)
 LEAD, TARGET = 3, 0.95
 
 
-def fit(train: pd.DataFrame, feats: list[str], seed: int = C.SEED) -> lgb.LGBMRegressor:
-    return lgb.LGBMRegressor(**COMMON, random_state=seed).fit(
+def fit(train: pd.DataFrame, feats: list[str], seed: int = C.SEED, **overrides) -> lgb.LGBMRegressor:
+    """Tweedie LightGBM with the shared defaults; `overrides` replace single parameters (e.g. num_leaves, n_estimators)."""
+    return lgb.LGBMRegressor(**{**COMMON, **overrides}, random_state=seed).fit(
         train[feats], train.y, categorical_feature=[c for c in CATEGORICAL if c in feats])
 
 
-def predict_origins(model: lgb.LGBMRegressor, origins: list[pd.DataFrame], feats: list[str], n_items: int) -> list[np.ndarray]:
+def predict_origins(model: lgb.LGBMRegressor, origins: list[pd.DataFrame], feats: list[str], n_items: int,
+                    num_iteration: int | None = None) -> list[np.ndarray]:
     """One (items, HORIZON) forecast per weekly origin; days without a price are set to 0."""
-    return [np.clip(model.predict(rows[feats]), 0, None).reshape(n_items, C.HORIZON)
+    return [np.clip(model.predict(rows[feats], num_iteration=num_iteration), 0, None).reshape(n_items, C.HORIZON)
             * rows.on_sale.to_numpy().reshape(n_items, C.HORIZON) for rows in origins]
 
 

@@ -1,0 +1,5 @@
+model,daily_wape,weekly_wape,wape_28d,weekly_std,inv_days_95,forecast_week_change
+shipped lean model (default config),0.6738,0.341,0.235,0.0005,6.4595,0.0196
+"A lean (11), best dev config",0.671,0.3395,0.2324,0.0022,6.4469,0.0182
+"B lean + calendar (16), best dev config",0.6676,0.3407,0.2303,0.0008,6.4452,0.0726
+"C all 24, best dev config",0.6649,0.3421,0.2315,0.0026,6.5152,0.0513
