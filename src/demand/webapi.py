@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from . import config as C
+from . import selector
 from . import serving as S
 
 _LOCK = threading.Lock()
@@ -49,6 +50,13 @@ def _model():
 def _demo_table() -> pd.DataFrame:
     df = pd.read_parquet(C.PROC / f"panel_{C.STORE}.parquet", columns=["item_id", "date", "d", "sales", "sell_price"])
     return df[df.d <= C.TEST_CUTOFF].drop(columns="d")  # nothing after the model's training window is shown
+
+
+@lru_cache(maxsize=1)
+def _norm():
+    import lightgbm as lgb
+    path = S.MODEL_DIR / "norm_model.txt"
+    return lgb.Booster(model_file=str(path)) if path.exists() else None
 
 
 def demo_available() -> bool:
@@ -125,7 +133,7 @@ def analyze(payload: dict) -> dict:
         raise UserError(str(e)) from e
     booster, meta_ = _model()
     limit = (meta_.get("level_range") or {}).get("mean28_p999")  # highest demand level the model has seen often enough
-    f, fallback = S.forecast_with_info(shop, booster, meta_["features"], limit)
+    f, fallback, choice = selector.select(shop, booster, meta_["features"], limit, _norm())
     on_hand, on_order = _stock(payload, shop)
     status = S.item_status(shop).astype(object)
     status[fallback] = "range"  # forecast by the weekday average, the model is not used for such a high demand level
@@ -145,7 +153,7 @@ def analyze(payload: dict) -> dict:
         _STATE[token] = dict(shop=shop, f=f, on_hand=on_hand, on_order=on_order, status=status, calibration=meta_["calibration"])
     return dict(token=token, notes=shop.notes, n_items=n, n_days=len(shop.dates), hist_start=str(shop.dates[-84].date()), forecast_from=str(first.date()),
                 forecast_to=str((first + pd.Timedelta(days=C.HORIZON - 1)).date()), next7=float(f[:, :7].sum()), last7=float(shop.Y[:, -7:].sum()),
-                n_new=int((status == "new").sum()), n_dormant=int((status == "dormant").sum()), n_range=int(fallback.sum()), level_limit=limit, has_stock=on_hand is not None,
+                n_new=int((status == "new").sum()), n_dormant=int((status == "dormant").sum()), n_range=int(fallback.sum()), level_limit=limit, method=choice, has_stock=on_hand is not None,
                 has_price=shop.price is not None, items=items)
 
 

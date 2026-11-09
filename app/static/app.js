@@ -199,7 +199,7 @@ function forecastTab() {
     metric(t.items, fmt(d.n_items)) + metric(t.history, fmt(d.n_days)) + metric(t.start, `${d.forecast_from} ${t.end} ${d.forecast_to}`, true) + "</div>" +
     d.notes.map((n) => `<div class="msg warn">${esc(n)}</div>`).join("") + (d.notes.length ? "" : `<p class="note">${esc(t.warn_last)}</p>`) +
     (d.n_new || d.n_dormant ? `<div class="msg info">${esc(t.st_new)}: ${d.n_new}; ${esc(t.st_dormant)}: ${d.n_dormant}</div>` : "") +
-    (d.n_range ? `<div class="msg warn">${d.n_range} ${esc(t.range_info)}</div>` : "") + "</details>";
+    `<div class="msg info">${esc(t.method_label)}: <strong>${esc(d.method.method)}</strong>${d.method.windows ? " (" + Object.entries(d.method.backtest).slice(0, 3).map(([k, v]) => esc(k) + " " + v).join("; ") + ")" : " (" + esc(t.short_history) + ")"}</div>` + (d.n_range ? `<div class="msg warn">${d.n_range} ${esc(t.range_info)}</div>` : "") + "</details>";
   const chart = lineChart(it.hist, it.fc, d.hist_start, d.forecast_from);
   const row = state.plan && state.plan.rows.find((r) => r.item_id === it.id);
   const rec = row ? `<h2>${esc(t.item_plan.replace("{lead}", state.lead).replace("{service}", state.service))}</h2><div class="metrics">` +

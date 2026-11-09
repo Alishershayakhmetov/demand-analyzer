@@ -52,6 +52,8 @@ window.I18N = {
   "st_new": "новый (<28 дней)",
   "st_dormant": "нет продаж 28 дней",
   "examples": "Примеры файлов (открытые данные)",
+  "method_label": "Метод прогноза выбран бэктестом на ваших данных (недельный WAPE, ниже лучше)",
+  "short_history": "история слишком короткая для бэктеста, взято среднее по дню недели",
   "st_range": "спрос выше диапазона модели",
   "range_info": "товаров с уровнем спроса выше того, на котором обучена модель (прогноз для них = среднее по дню недели за 8 недель)",
   "cols": {
@@ -162,6 +164,8 @@ window.I18N = {
   "st_new": "new (<28 days)",
   "st_dormant": "no sales for 28 days",
   "examples": "Example files (open data)",
+  "method_label": "Forecast method chosen by a backtest on your data (weekly WAPE, lower is better)",
+  "short_history": "history too short for a backtest, weekday average used",
   "st_range": "demand above the model's range",
   "range_info": "items with a demand level above what the model was trained on (their forecast = average of the same weekday over 8 weeks)",
   "cols": {

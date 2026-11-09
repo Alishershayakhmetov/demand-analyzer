@@ -380,6 +380,27 @@ windows each, weekly WAPE. Success rules were declared in the script before the 
   everywhere except M5 and the bakery, where simple baselines or norm-M5 win. Not implemented yet. An ensemble without norm-multi was not tried,
   because picking it now would be selection on these same results.
 
+### Method selection by backtest (`src/demand/selector.py`, `scripts/21_train_norm.py`, `scripts/22_selector_check.py`, `reports/selector_check.txt`)
+
+The app now chooses the method for each uploaded file itself: it forecasts the last one or two 28-day windows of the file from the data before
+them with seven candidates (seasonal naive, 28-day average, weekday average, the M5 LightGBM with the range guard, the scale-normalised LightGBM,
+Chronos-Bolt, Chronos-Bolt averaged with the weekday average), and takes the lowest weekly WAPE; a complex method must beat the best simple one by
+2%. Files too short for a backtest get the weekday average. The chosen method and the backtest scores are shown in the data check. Chronos is used only if
+`requirements-extra.txt` is installed. M5 demo: LightGBM (M5) is chosen, numbers unchanged.
+
+End-to-end check on the open datasets (three 28-day windows each, selection made only from the data before each window; rule declared in advance:
+within +3% of the best simple baseline everywhere): **NOT PASSED**, because of the bakery.
+
+| Weekly WAPE | bakery | hierarchical | Rohlik | Online Retail | Rossmann |
+|---|---|---|---|---|---|
+| best simple baseline | 0.234 | 0.485 | 0.227 | 0.602 | 0.153 |
+| service with selector | 0.269 (+15%) | **0.422 (-13%)** | **0.199 (-12%)** | **0.587 (-2.5%)** | 0.156 (+2%) |
+
+Selection fixes the large failures (it picks Chronos where it is best, the weekday average where nothing beats it) and beats the best baseline on three
+of five files. The bakery (0.04 units per item a day, 106-134 days of history) stays worse: its backtest had one window and picked the 28-day average
+in one case and fell back to the weekday average in the other, and the real window was noisy. With so little data no method choice is reliable.
+M5 is not in this check because both shipped LightGBM models were trained on it.
+
 ## Report and slides (`docs/`)
 
 - `docs/Demand_Copilot_report.docx`: technical report in Russian (task, data, methods, experiments, app and 5-minute demo script,
