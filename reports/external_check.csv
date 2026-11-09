@@ -1,0 +1,21 @@
+dataset,method,items,daily,weekly,d28,bias
+bakery_daily,service (model trained on M5 + range guard),89,0.5309,0.2674,0.2107,0.0423
+bakery_daily,seasonal naive,89,0.5232,0.2413,0.1852,0.0074
+bakery_daily,28-day average,89,0.5248,0.2521,0.1872,0.0672
+bakery_daily,"weekday average, 8 weeks",89,0.5153,0.268,0.2108,0.0685
+hierarchical_sales,service (model trained on M5 + range guard),118,0.8142,0.4213,0.2933,-0.0886
+hierarchical_sales,seasonal naive,118,1.0347,0.5311,0.4328,0.0307
+hierarchical_sales,28-day average,118,0.8448,0.481,0.3728,-0.036
+hierarchical_sales,"weekday average, 8 weeks",118,0.8422,0.412,0.2892,-0.0848
+rohlik_prague1_top300,service (model trained on M5 + range guard),300,0.2849,0.2338,0.1916,-0.0179
+rohlik_prague1_top300,seasonal naive,300,0.321,0.2394,0.2085,-0.0221
+rohlik_prague1_top300,28-day average,300,0.3103,0.2414,0.1985,-0.0032
+rohlik_prague1_top300,"weekday average, 8 weeks",300,0.2889,0.2377,0.1953,-0.0118
+online_retail_ii_top300_invoice_lines,service (model trained on M5 + range guard),299,0.9032,0.5781,0.4856,-0.3228
+online_retail_ii_top300_invoice_lines,seasonal naive,299,1.085,0.6598,0.5722,-0.1393
+online_retail_ii_top300_invoice_lines,28-day average,299,0.9106,0.5498,0.4523,-0.239
+online_retail_ii_top300_invoice_lines,"weekday average, 8 weeks",299,0.8924,0.5693,0.446,-0.2218
+rossmann_300_stores_euro,service (model trained on M5 + range guard),300,0.1925,0.1529,0.0486,-0.0372
+rossmann_300_stores_euro,seasonal naive,300,0.2275,0.1994,0.1821,-0.1811
+rossmann_300_stores_euro,28-day average,300,0.3584,0.1526,0.0442,-0.0266
+rossmann_300_stores_euro,"weekday average, 8 weeks",300,0.1925,0.1529,0.0486,-0.0372

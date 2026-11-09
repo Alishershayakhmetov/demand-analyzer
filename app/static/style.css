@@ -66,6 +66,9 @@ table.t tr:hover td { background: #F1F5FA; }
 .scroll { max-height: 460px; overflow: auto; border: 1px solid var(--grid); border-radius: var(--radius); }
 .scroll table.t { border: 0; }
 .tag { padding: 1px 8px; border-radius: 10px; font-size: 12px; background: var(--surface); }
-.tag.new, .tag.dormant { background: #FDEFD9; color: #6B4A12; }
+.tag.new, .tag.dormant, .tag.range { background: #FDEFD9; color: #6B4A12; }
 .limits li { margin: 6px 0; }
 img.fig { max-width: 100%; border: 1px solid var(--grid); border-radius: var(--radius); background: #fff; }
+
+.examples { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.btn.ex { text-align: left; font-size: 13px; line-height: 1.3; }

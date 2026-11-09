@@ -15,6 +15,14 @@ Z = np.arange(-1.0, 6.01, 0.25)
 LEAD, TARGET = 3, 0.95
 
 
+def level_range(m: Matrices, last_day: int = C.TEST_CUTOFF) -> dict[str, float]:
+    """Highest 28-day mean daily sales of any item in the training period: the demand levels the model has seen."""
+    y = m.Y[:, :last_day].astype(float)
+    c = np.cumsum(y, axis=1)
+    m28 = (c[:, 28:] - c[:, :-28]) / 28
+    return dict(mean28_max=float(m28.max()), mean28_p999=float(np.quantile(m28, 0.999)), mean28_median=float(np.median(m28)))
+
+
 def fit(train: pd.DataFrame, feats: list[str], seed: int = C.SEED, **overrides) -> lgb.LGBMRegressor:
     """Tweedie LightGBM with the shared defaults; `overrides` replace single parameters (e.g. num_leaves, n_estimators)."""
     return lgb.LGBMRegressor(**{**COMMON, **overrides}, random_state=seed).fit(

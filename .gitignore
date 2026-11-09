@@ -7,3 +7,5 @@ data/processed/
 models/
 *.zip
 docs/build/node_modules/
+data/external/
+examples/*.csv

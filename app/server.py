@@ -67,6 +67,11 @@ class Handler(BaseHTTPRequestHandler):
                 if STATIC.resolve() not in path.parents:
                     return self._json({"error": "not found"}, 404)
                 return self._file(path)
+            if url.path.startswith("/examples/"):
+                name = url.path[len("/examples/"):]
+                if name.endswith(".csv") and name[:-4] in webapi.EXAMPLES:
+                    return self._file(webapi.EXAMPLES_DIR / name)
+                return self._json({"error": "not found"}, 404)
             if url.path == "/reports/inventory_frontier.png":
                 return self._file(C.REPORTS / "figures" / "inventory_frontier.png")
             if url.path == "/api/meta":

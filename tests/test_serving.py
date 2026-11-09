@@ -7,6 +7,8 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from demand import config as C  # noqa: E402
+from demand import serving as S  # noqa: E402
+from demand.baselines import weekday_mean  # noqa: E402
 from demand.serving import Shop, build_features, item_status, purchase_plan, to_shop, z_for_service  # noqa: E402
 
 
@@ -72,6 +74,23 @@ class PlanTest(unittest.TestCase):
         cal = {"3": {"z": [0.0, 1.0, 2.0], "fill": [0.8, 0.9, 0.99]}}
         self.assertAlmostEqual(z_for_service(cal, 3, 0.9), 1.0)
         self.assertAlmostEqual(z_for_service(cal, 3, 0.945), 1.5, places=2)
+
+
+@unittest.skipUnless((S.MODEL_DIR / "lean_model.txt").exists(), "needs models/ from scripts/14_train_final.py")
+class RangeGuardTest(unittest.TestCase):
+    def test_high_volume_items_use_weekday_average(self):
+        booster, meta = S.load_model()
+        T = 140
+        rng = np.random.default_rng(0)
+        Y = np.stack([rng.poisson(3, T), rng.poisson(500, T)]).astype(float)  # one item inside, one far above the training range
+        shop = Shop(["small", "big"], pd.date_range(end="2024-03-10", periods=T), Y, None, np.array([0, 0]))
+        f, fallback = S.forecast_with_info(shop, booster, meta["features"], level_limit=37.0)
+        self.assertEqual(list(fallback), [False, True])
+        np.testing.assert_allclose(f[1], weekday_mean(Y)[1])
+        self.assertGreater(f[1].mean(), 300)  # the model alone would have stayed far below the true level
+        f_model_only = S.forecast(shop, booster, meta["features"])
+        self.assertLess(f_model_only[1].mean(), 150)
+        self.assertEqual(S.forecast_with_info(shop, booster, meta["features"])[1].sum(), 0)  # no limit, no fallback
 
 
 @unittest.skipUnless((C.PROC / f"panel_{C.STORE}.parquet").exists(), "needs data/processed from scripts/02_prepare.py")

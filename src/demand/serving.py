@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from . import config as C
+from .baselines import weekday_mean
 from .evaluate import Matrices
 from .features import build_rows
 
@@ -92,6 +93,16 @@ def build_features(shop: Shop) -> pd.DataFrame:
 
 def forecast(shop: Shop, booster: lgb.Booster, features: list[str]) -> np.ndarray:
     """(items, 28) daily forecast for the 28 days after the last Sunday; new items get their average so far."""
+    return forecast_with_info(shop, booster, features)[0]
+
+
+def forecast_with_info(shop: Shop, booster: lgb.Booster, features: list[str], level_limit: float | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """Like `forecast`, plus a mask of items that were forecast by the weekday average instead of the model.
+
+    The model was trained on items selling at most `level_limit` units per day (28-day mean). Trees cannot extrapolate beyond the
+    levels they have seen, so an item above that limit would be forecast far too low; it gets the average of the same weekday over
+    the last 8 weeks instead.
+    """
     n, T = shop.Y.shape
     rows = build_features(shop)
     f = np.clip(booster.predict(rows[features]), 0, None).reshape(n, C.HORIZON)
@@ -100,7 +111,12 @@ def forecast(shop: Shop, booster: lgb.Booster, features: list[str]) -> np.ndarra
         history = shop.Y[i, shop.first_idx[i]:] if shop.first_idx[i] < T else np.zeros(1)
         f[i] = history.mean()
     f[status == "dormant"] = 0.0
-    return f
+    fallback = np.zeros(n, dtype=bool)
+    if level_limit is not None:
+        fallback = (shop.Y[:, -NEW_ITEM_DAYS:].mean(axis=1) > level_limit) & (status == "ok")
+        if fallback.any():
+            f[fallback] = np.clip(weekday_mean(shop.Y)[fallback], 0, None)
+    return f, fallback
 
 
 def z_for_service(calibration: dict, lead: int, target: float) -> float:
@@ -111,8 +127,10 @@ def z_for_service(calibration: dict, lead: int, target: float) -> float:
 
 
 def purchase_plan(shop: Shop, f: np.ndarray, lead: int, z: float, on_hand: np.ndarray | None = None,
-                  on_order: np.ndarray | None = None) -> pd.DataFrame:
-    """Order-up-to plan for one review: cover demand over lead time + 7 days plus z standard deviations."""
+                  on_order: np.ndarray | None = None, status: np.ndarray | None = None) -> pd.DataFrame:
+    """Order-up-to plan for one review: cover demand over lead time + 7 days plus z standard deviations.
+
+    `status` defaults to `item_status(shop)`; pass your own to carry extra labels such as "range"."""
     span = lead + 7
     n = len(shop.ids)
     on_hand = np.zeros(n) if on_hand is None else on_hand
@@ -121,7 +139,7 @@ def purchase_plan(shop: Shop, f: np.ndarray, lead: int, z: float, on_hand: np.nd
     sigma = shop.Y[:, -91:].std(axis=1) * np.sqrt(span)
     target = mean + z * sigma
     qty = np.ceil(np.maximum(target - on_hand - on_order, 0))
-    status = item_status(shop)
+    status = item_status(shop) if status is None else status
     qty[status == "dormant"] = 0
     out = pd.DataFrame({"item_id": shop.ids, "status": status, "forecast_next_7d": f[:, :7].sum(axis=1).round(1),
                         f"forecast_{span}d": mean.round(1), "safety_stock": (z * sigma).round(1),

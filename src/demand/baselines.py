@@ -1,8 +1,6 @@
 """Baseline forecasters. All take a history matrix (items x days) and return an (items x HORIZON) forecast."""
 import numpy as np
 import pandas as pd
-from statsforecast import StatsForecast
-from statsforecast.models import AutoETS, CrostonSBA, TSB
 
 from .config import HORIZON
 
@@ -37,6 +35,9 @@ def weekday_quantile(hist: np.ndarray, q: float, weeks: int = 8) -> np.ndarray:
 
 def statsforecast_models(hist: np.ndarray, first_day: np.ndarray, item_ids: list[str], max_len: int = 730) -> dict[str, np.ndarray]:
     """ETS, Croston-SBA and TSB per series. Each series starts at its first sale-day and is capped at max_len days."""
+    from statsforecast import StatsForecast  # imported here so the web app does not need statsforecast
+    from statsforecast.models import AutoETS, CrostonSBA, TSB
+
     t = hist.shape[1]
     frames = []
     for i, item in enumerate(item_ids):

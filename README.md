@@ -317,9 +317,44 @@ How it is wired:
   Daily values are expected demand, so 99% of them are fractional (56% are below 1 unit); the weekly table is rounded.
   Lead time and service level only affect the purchase plan and the per-item recommendation, not the forecast chart.
 - The app follows the recent weeks closely: on synthetic stationary demand a random +20% week raised the forecast by a similar amount.
-- Checked: 18 unit tests (`tests/test_webapi.py` runs a semicolon-delimited CSV with other column names and a Wednesday end through
+- Checked: 19 unit tests (`tests/test_webapi.py` runs a semicolon-delimited CSV with other column names and a Wednesday end through
   the API, with and without a stock file), and in the browser the demo, the language switch, lead time and service level changes,
-  the plan download and a file upload. Not checked: an upload of a real shop's data.
+  the plan download, a file upload and the five example files from open data (next section). Not checked: an upload of a real shop's data.
+
+## Check on other data (`scripts/18_external_examples.py`, `scripts/19_external_check.py`, `examples/README.md`)
+
+Five open datasets other than M5 were downloaded (sources in `examples/README.md`) and turned into CSV files that the app can load
+(example buttons in the upload mode). For each file the history is cut 28 days before the end of the data (on a Sunday), the app's API
+(`webapi.analyze`) forecasts the next 28 days from the CSV text exactly as an upload would, and the forecast is scored against what
+happened. Nothing is tuned on these files; the model is the M5 model. One 28-day window per file, so the numbers are indicative only.
+Details: `reports/external_check.txt`, `reports/external_check.csv`.
+
+Weekly WAPE (lower is better):
+
+| File | items | median recent level, units/day | items above the model's range | **service** | seasonal naive | 28-day average | weekday average 8w |
+|---|---|---|---|---|---|---|---|
+| bakery (small shop) | 89 | 0.04 | 0 | 0.267 | **0.241** | 0.252 | 0.268 |
+| hierarchical sales | 118 | 2.5 | 0 | 0.421 | 0.531 | 0.481 | **0.412** |
+| Rohlik grocery | 300 | 129 | 265 | **0.234** | 0.239 | 0.241 | 0.238 |
+| Online Retail II (invoice lines) | 299 | 21 | 62 | 0.578 | 0.660 | **0.550** | 0.569 |
+| Rossmann (euro per store) | 300 | 5 509 | 300 | **0.153** | 0.199 | **0.153** | **0.153** |
+
+What this says:
+- **The service runs on all five files without preparation**: comma, semicolon or tab separators, raw invoice lines with many rows
+  per day, timestamps, returns as negative quantities (set to 0), missing values (rows dropped, the days count as zero).
+- **Inside the demand range the model was trained on, it is about as good as simple baselines, not better**: hierarchical sales 0.421
+  against 0.412 for the weekday average (and clearly better than seasonal naive and the 28-day average); the bakery 0.267 against
+  0.241 and 0.252 (volumes are tiny and the history is only 134 days).
+- **Outside that range the model failed badly until a guard was added.** The first run gave weekly WAPE 0.910 on Rohlik (forecasts
+  were 91% too low), 0.666 on Online Retail and 0.996 on Rossmann, because trees cannot extrapolate beyond the levels they saw
+  (M5 items sell at most ~37 units a day in 99.9% of the training days). The guard now forecasts any item whose 28-day mean is above
+  that level (`models/meta.json`, `level_range.mean28_p999`) by the weekday average of the last 8 weeks and marks it in the app
+  ("demand above the model's range"). The threshold comes from the training data, not from these files, but it was added after seeing
+  the failures. With it the service equals the weekday average on Rohlik and Rossmann: it does not add value there, but it no longer gives wrong numbers.
+- **Online Retail II is the weak case**: 0.578 against 0.550 for the 28-day average, and a bias of -32% (every method under-forecasts
+  by 14-24% because the window, 7 Nov - 4 Dec 2011, is the pre-Christmas rise). The model knows nothing about seasons.
+- Conclusion for use: the service can forecast other data, but outside M5-like volumes (a few units per item and day) the model is not better than a
+  28-day or weekday average, and the claim from the test fold stays: its advantage over simple methods is small and unstable.
 
 ## Report and slides (`docs/`)
 

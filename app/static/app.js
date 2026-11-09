@@ -51,6 +51,18 @@ async function reloadPlan() {
   render();
 }
 
+async function loadExample(name) {
+  const e = state.meta.examples.find((x) => x.name === name);
+  state.busy = true; state.error = null; render();
+  try {
+    const r = await fetch(`/examples/${name}.csv`);
+    if (!r.ok) throw new Error(`${T().server_error} ${r.status}`);
+    state.csvText = await r.text(); state.csvName = `${name}.csv`; setHeader(state.csvText);
+    state.cols = { date: e.cols.date, item: e.cols.item, sales: e.cols.sales, price: e.cols.price || "" };
+  } catch (err) { state.busy = false; state.error = errorText(err); return render(); }
+  state.busy = false; await analyze();
+}
+
 // ---------- csv helpers ----------
 function splitHeader(text) {
   const line = text.replace(/^﻿/, "").split(/\r?\n/, 1)[0];
@@ -82,6 +94,10 @@ function renderPanel() {
   if (state.source === "demo") {
     data += `<label class="opt"><input type="checkbox" id="synthetic" ${state.synthetic ? "checked" : ""}> <span>${esc(t.demo_stock)}</span></label>`;
   } else {
+    if (m.examples && m.examples.length) {
+      data += `<label class="field">${esc(t.examples)}</label><div class="examples">` + m.examples.map((e) =>
+        `<button class="btn ex" data-ex="${esc(e.name)}" type="button" title="${esc(e.name)}.csv, ${e.size_mb} MB">${esc(state.lang === "ru" ? e.label_ru : e.label_en)}</button>`).join("") + "</div>";
+    }
     data += `<label class="field">${esc(t.file)}</label><button class="btn" id="pick-csv" type="button">${esc(t.file)}…</button><input id="file-csv" type="file" accept=".csv,text/csv,text/plain" hidden>` +
       `<span class="filename">${esc(state.csvName || t.no_file)}</span>`;
     if (state.header.length) {
@@ -105,6 +121,7 @@ function bindPanel() {
   const p = $("#panel");
   p.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => { state.lang = b.dataset.lang; document.documentElement.lang = state.lang; render(); }));
   p.querySelectorAll("input[name=src]").forEach((r) => r.addEventListener("change", () => { state.source = r.value; renderPanel(); analyze(); }));
+  p.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => loadExample(b.dataset.ex)));
   const syn = $("#synthetic"); if (syn) syn.addEventListener("change", () => { state.synthetic = syn.checked; analyze(); });
   const pick = (btn, input, onText) => {
     const b = $(btn), i = $(input); if (!b) return;
@@ -173,15 +190,16 @@ function barChart(labels, past, ahead) {
 
 // ---------- main view ----------
 const metric = (label, value, sm = false) => `<div class="metric"><div class="label">${esc(label)}</div><div class="value${sm ? " sm" : ""}">${value}</div></div>`;
-const statusName = (s) => ({ ok: T().st_ok, new: T().st_new, dormant: T().st_dormant }[s] || s);
+const statusName = (s) => ({ ok: T().st_ok, new: T().st_new, dormant: T().st_dormant, range: T().st_range }[s] || s);
 const tag = (s) => `<span class="tag ${s}">${esc(statusName(s))}</span>`;
 
 function forecastTab() {
   const t = T(), d = state.data, it = d.items.find((x) => x.id === state.item) || d.items[0];
-  const checks = `<details class="card"${state.openChecks ?? d.notes.length ? " open" : ""}><summary>${esc(t.data_check)}</summary><div class="metrics">` +
+  const checks = `<details class="card"${(state.openChecks ?? (d.notes.length || d.n_range)) ? " open" : ""}><summary>${esc(t.data_check)}</summary><div class="metrics">` +
     metric(t.items, fmt(d.n_items)) + metric(t.history, fmt(d.n_days)) + metric(t.start, `${d.forecast_from} ${t.end} ${d.forecast_to}`, true) + "</div>" +
     d.notes.map((n) => `<div class="msg warn">${esc(n)}</div>`).join("") + (d.notes.length ? "" : `<p class="note">${esc(t.warn_last)}</p>`) +
-    (d.n_new || d.n_dormant ? `<div class="msg info">${esc(t.st_new)}: ${d.n_new}; ${esc(t.st_dormant)}: ${d.n_dormant}</div>` : "") + "</details>";
+    (d.n_new || d.n_dormant ? `<div class="msg info">${esc(t.st_new)}: ${d.n_new}; ${esc(t.st_dormant)}: ${d.n_dormant}</div>` : "") +
+    (d.n_range ? `<div class="msg warn">${d.n_range} ${esc(t.range_info)}</div>` : "") + "</details>";
   const chart = lineChart(it.hist, it.fc, d.hist_start, d.forecast_from);
   const row = state.plan && state.plan.rows.find((r) => r.item_id === it.id);
   const rec = row ? `<h2>${esc(t.item_plan.replace("{lead}", state.lead).replace("{service}", state.service))}</h2><div class="metrics">` +

@@ -1,0 +1,41 @@
+scale of the training items (28-day mean units per day): median 0.46, 99.9th percentile 37.1
+
+== bakery_daily: small bakery, units per item and day
+history to 2017-03-12 (134 days), forecast window 2017-03-13..2017-04-09, 89 items, median recent level 0.04/day, 0% of items above the training maximum; share of zero days in the window 72%
+plan check (lead 3 d, 95%): 48 items to order, 1,579 units; 0 items above the model's demand range use the weekday average; notes: none
+  service (model trained on M5 + range guard) daily WAPE 0.531  weekly 0.267  28-day 0.211  bias +4.2%
+  seasonal naive                       daily WAPE 0.523  weekly 0.241  28-day 0.185  bias +0.7%
+  28-day average                       daily WAPE 0.525  weekly 0.252  28-day 0.187  bias +6.7%
+  weekday average, 8 weeks             daily WAPE 0.515  weekly 0.268  28-day 0.211  bias +6.8%
+
+== hierarchical_sales: 118 daily quantity series, 5 years
+history to 2018-12-02 (1796 days), forecast window 2018-12-03..2018-12-30, 118 items, median recent level 2.48/day, 0% of items above the training maximum; share of zero days in the window 35%
+plan check (lead 3 d, 95%): 118 items to order, 5,091 units; 0 items above the model's demand range use the weekday average; notes: ['2832 rows with an unreadable date or sales value were dropped']
+  service (model trained on M5 + range guard) daily WAPE 0.814  weekly 0.421  28-day 0.293  bias -8.9%
+  seasonal naive                       daily WAPE 1.035  weekly 0.531  28-day 0.433  bias +3.1%
+  28-day average                       daily WAPE 0.845  weekly 0.481  28-day 0.373  bias -3.6%
+  weekday average, 8 weeks             daily WAPE 0.842  weekly 0.412  28-day 0.289  bias -8.5%
+
+== rohlik_prague1_top300: grocery e-commerce, 300 products, one warehouse
+history to 2024-05-05 (1374 days), forecast window 2024-05-06..2024-06-02, 300 items, median recent level 129.37/day, 88% of items above the training maximum; share of zero days in the window 12%
+plan check (lead 3 d, 95%): 276 items to order, 884,766 units; 265 items above the model's demand range use the weekday average; notes: ['37108 rows with an unreadable date or sales value were dropped']
+  service (model trained on M5 + range guard) daily WAPE 0.285  weekly 0.234  28-day 0.192  bias -1.8%
+  seasonal naive                       daily WAPE 0.321  weekly 0.239  28-day 0.209  bias -2.2%
+  28-day average                       daily WAPE 0.310  weekly 0.241  28-day 0.198  bias -0.3%
+  weekday average, 8 weeks             daily WAPE 0.289  weekly 0.238  28-day 0.195  bias -1.2%
+
+== online_retail_ii_top300_invoice_lines: wholesaler invoice lines (raw, with returns)
+history to 2011-11-06 (706 days), forecast window 2011-11-07..2011-12-04, 299 items, median recent level 21.43/day, 21% of items above the training maximum; share of zero days in the window 34%
+plan check (lead 3 d, 95%): 277 items to order, 132,667 units; 62 items above the model's demand range use the weekday average; notes: ['5046 negative sales values (returns) were set to 0', '15559 duplicate item-day rows were summed']
+  service (model trained on M5 + range guard) daily WAPE 0.903  weekly 0.578  28-day 0.486  bias -32.3%
+  seasonal naive                       daily WAPE 1.085  weekly 0.660  28-day 0.572  bias -13.9%
+  28-day average                       daily WAPE 0.911  weekly 0.550  28-day 0.452  bias -23.9%
+  weekday average, 8 weeks             daily WAPE 0.892  weekly 0.569  28-day 0.446  bias -22.2%
+
+== rossmann_300_stores_euro: store-level sales in euro (scale stress test)
+history to 2015-06-28 (909 days), forecast window 2015-06-29..2015-07-26, 300 items, median recent level 5509.05/day, 100% of items above the training maximum; share of zero days in the window 14%
+plan check (lead 3 d, 95%): 300 items to order, 21,428,511 units; 300 items above the model's demand range use the weekday average; notes: ['10120 rows with an unreadable date or sales value were dropped']
+  service (model trained on M5 + range guard) daily WAPE 0.193  weekly 0.153  28-day 0.049  bias -3.7%
+  seasonal naive                       daily WAPE 0.228  weekly 0.199  28-day 0.182  bias -18.1%
+  28-day average                       daily WAPE 0.358  weekly 0.153  28-day 0.044  bias -2.7%
+  weekday average, 8 weeks             daily WAPE 0.193  weekly 0.153  28-day 0.049  bias -3.7%

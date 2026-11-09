@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from demand import config as C  # noqa: E402
 from demand.evaluate import load_matrices  # noqa: E402
 from demand.features import FEATURES, build_rows, training_rows  # noqa: E402
-from demand.modeling import Z, fit, inventory_frontier, predict_origins  # noqa: E402
+from demand.modeling import Z, fit, inventory_frontier, level_range, predict_origins  # noqa: E402
 from demand.serving import forecast, to_shop  # noqa: E402
 
 LEADS = [1, 3, 7]
@@ -48,7 +48,7 @@ def main() -> None:
     (C.ROOT / "models").mkdir(exist_ok=True)
     model.booster_.save_model(str(C.ROOT / "models" / "lean_model.txt"))
     meta = dict(features=feats, trained_through_day=C.TEST_CUTOFF, trained_through_date="2016-05-22",
-                data="M5 store CA_1, 300 items", calibration=calibration)
+                data="M5 store CA_1, 300 items", calibration=calibration, level_range=level_range(m))
     meta["sha256"] = hashlib.sha256((C.ROOT / "models" / "lean_model.txt").read_bytes()).hexdigest()
     (C.ROOT / "models" / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
 

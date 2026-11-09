@@ -19,6 +19,23 @@ _MAX_STATES = 6
 DEMO_COLS = dict(date_col="date", item_col="item_id", sales_col="sales", price_col="sell_price")
 
 
+# Example files made by scripts/18_external_examples.py (open data other than M5); column names as in the files.
+EXAMPLES = {
+    "bakery_daily": dict(date="date", item="item", sales="sales", price=None, what="small bakery, units per item and day",
+                         ru="Небольшая пекарня: штук по товару и дню", en="Small bakery: units per item and day"),
+    "hierarchical_sales": dict(date="date", item="item", sales="sales", price=None, what="118 daily quantity series, 5 years",
+                               ru="118 дневных рядов продаж за 5 лет", en="118 daily sales series over 5 years"),
+    "rohlik_prague1_top300": dict(date="date", item="item", sales="sales", price="price", what="grocery e-commerce, 300 products, one warehouse",
+                                  ru="Онлайн-продукты (Rohlik), 300 товаров, с ценой", en="Online grocery (Rohlik), 300 products, with price"),
+    "online_retail_ii_top300_invoice_lines": dict(date="InvoiceDate", item="StockCode", sales="Quantity", price="Price",
+                                                  what="wholesaler invoice lines (raw, with returns)",
+                                                  ru="Оптовик: строки счетов как есть, с возвратами", en="Wholesaler: raw invoice lines with returns"),
+    "rossmann_300_stores_euro": dict(date="date", item="store", sales="sales", price=None, what="store-level sales in euro (scale stress test)",
+                                     ru="Сети магазинов Rossmann: продажи магазинов в евро", en="Rossmann stores: sales per store in euro"),
+}
+EXAMPLES_DIR = C.ROOT / "examples"
+
+
 class UserError(ValueError):
     """Problem with what the user sent; its message is shown in the interface."""
 
@@ -65,6 +82,8 @@ def meta() -> dict:
         t = pd.read_csv(tst)
         keep = ["seasonal naive", "28-day average", "weekday average, 8 weeks", "AutoETS", "LightGBM selected 11 (FINAL, stored model)"]
         out["quality_test"] = t[t.model.isin(keep)][["model", "daily_wape", "weekly_wape", "wape_28d"]].round(4).to_dict("records")
+    out["examples"] = [dict(name=k, label_ru=v["ru"], label_en=v["en"], cols={kk: v[kk] for kk in ("date", "item", "sales", "price")},
+                            size_mb=round((EXAMPLES_DIR / f"{k}.csv").stat().st_size / 1e6, 1)) for k, v in EXAMPLES.items() if (EXAMPLES_DIR / f"{k}.csv").exists()]
     out["frontier_image"] = (C.REPORTS / "figures" / "inventory_frontier.png").exists()
     return out
 
@@ -105,9 +124,11 @@ def analyze(payload: dict) -> dict:
     except ValueError as e:
         raise UserError(str(e)) from e
     booster, meta_ = _model()
-    f = S.forecast(shop, booster, meta_["features"])
+    limit = (meta_.get("level_range") or {}).get("mean28_p999")  # highest demand level the model has seen often enough
+    f, fallback = S.forecast_with_info(shop, booster, meta_["features"], limit)
     on_hand, on_order = _stock(payload, shop)
-    status = S.item_status(shop)
+    status = S.item_status(shop).astype(object)
+    status[fallback] = "range"  # forecast by the weekday average, the model is not used for such a high demand level
     n = len(shop.ids)
     order = np.argsort(-shop.Y[:, -28:].sum(axis=1), kind="stable")
     first = shop.dates[-1] + pd.Timedelta(days=1)
@@ -121,10 +142,10 @@ def analyze(payload: dict) -> dict:
     with _LOCK:
         while len(_STATE) >= _MAX_STATES:
             _STATE.pop(next(iter(_STATE)))
-        _STATE[token] = dict(shop=shop, f=f, on_hand=on_hand, on_order=on_order, calibration=meta_["calibration"])
+        _STATE[token] = dict(shop=shop, f=f, on_hand=on_hand, on_order=on_order, status=status, calibration=meta_["calibration"])
     return dict(token=token, notes=shop.notes, n_items=n, n_days=len(shop.dates), hist_start=str(shop.dates[-84].date()), forecast_from=str(first.date()),
                 forecast_to=str((first + pd.Timedelta(days=C.HORIZON - 1)).date()), next7=float(f[:, :7].sum()), last7=float(shop.Y[:, -7:].sum()),
-                n_new=int((status == "new").sum()), n_dormant=int((status == "dormant").sum()), has_stock=on_hand is not None,
+                n_new=int((status == "new").sum()), n_dormant=int((status == "dormant").sum()), n_range=int(fallback.sum()), level_limit=limit, has_stock=on_hand is not None,
                 has_price=shop.price is not None, items=items)
 
 
@@ -141,7 +162,7 @@ def plan_frame(token: str, lead: int, service: int) -> tuple[pd.DataFrame, float
         raise UserError("lead time must be 1, 3 or 7 days and service level 90, 95 or 98")
     st = _state(token)
     z = S.z_for_service(st["calibration"], lead, service / 100)
-    return S.purchase_plan(st["shop"], st["f"], lead, z, st["on_hand"], st["on_order"]), z
+    return S.purchase_plan(st["shop"], st["f"], lead, z, st["on_hand"], st["on_order"], st["status"]), z
 
 
 def plan(token: str, lead: int, service: int) -> dict:

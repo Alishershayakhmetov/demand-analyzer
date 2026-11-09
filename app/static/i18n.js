@@ -51,6 +51,9 @@ window.I18N = {
   "st_ok": "ок",
   "st_new": "новый (<28 дней)",
   "st_dormant": "нет продаж 28 дней",
+  "examples": "Примеры файлов (открытые данные)",
+  "st_range": "спрос выше диапазона модели",
+  "range_info": "товаров с уровнем спроса выше того, на котором обучена модель (прогноз для них = среднее по дню недели за 8 недель)",
   "cols": {
    "item_id": "Товар",
    "status": "Статус",
@@ -84,6 +87,7 @@ window.I18N = {
    "Выигрыш над простым средним за 28 дней небольшой и нестабилен: на предыдущих окнах 3–5% по запасу, на итоговом тестовом окне его нет (модель требует на ~6% больше запаса, интервал включает 0). Над правилом «как за прошлую неделю» на тестовом окне выигрыш всего 0–4%.",
    "Продажи ≠ спрос: если товара не было на полке, спрос не виден. Товары без продаж 28 дней не планируются; новые (<28 дней) получают только среднее.",
    "История обрезается по последнее воскресенье: модель обучена на прогнозах, начинающихся с понедельника.",
+   "**Модель обучена на товарах, продающихся не более ~37 шт. в день** (в среднем за 28 дней). Для товаров с более высоким спросом она занижала бы прогноз, поэтому для них используется среднее по дню недели за 8 недель, они помечены статусом. Если ваши объёмы намного выше (например, магазины целиком), используйте другой метод.",
    "План — рекомендация. Решение о заказе принимает человек, особенно для дорогих и скоропортящихся товаров."
   ],
   "loading": "Расчёт…",
@@ -157,6 +161,9 @@ window.I18N = {
   "st_ok": "ok",
   "st_new": "new (<28 days)",
   "st_dormant": "no sales for 28 days",
+  "examples": "Example files (open data)",
+  "st_range": "demand above the model's range",
+  "range_info": "items with a demand level above what the model was trained on (their forecast = average of the same weekday over 8 weeks)",
   "cols": {
    "item_id": "Item",
    "status": "Status",
@@ -190,6 +197,7 @@ window.I18N = {
    "The gain over a plain 28-day average is small and unstable: 3-5% less inventory on earlier windows, none on the final test window (about 6% more inventory, interval includes 0). Over the 'same as last week' rule the test-window gain is only 0-4%.",
    "Sales are not demand: stock-outs hide demand. Items with no sales for 28 days are not planned; new items (<28 days) only get their average.",
    "History is cut at the last Sunday: the model was trained on forecasts starting on a Monday.",
+   "**The model was trained on items selling at most ~37 units per day** (28-day mean). It would under-forecast items with higher demand, so for them the average of the same weekday over 8 weeks is used and they carry a status. If your volumes are much higher (for example whole stores), use another method.",
    "The plan is a recommendation. A person decides the order, especially for expensive or perishable items."
   ],
   "loading": "Calculating…",
