@@ -418,6 +418,26 @@ In the M5 demo the new selector averages LightGBM (M5) and the weekly LightGBM; 
 were made before this change). The selector's candidate bias-corrected Chronos was chosen on Rossmann; the weekly-sum model was never the top choice on the open datasets
 (it ranks 2nd on M5).
 
+#### Items 4 and 6 of the improvement list (`scripts/25_offset_model.py`, `scripts/26_service_level_check.py`, `reports/offset_model.txt`, `reports/service_level_check.txt`)
+
+**4. Normalised model for tiny volumes: not fixed.** Counts as targets with log(level) as an offset (`universal.fit_offset`) instead of ratio targets. Leave-one-dataset-out,
+rules declared in the script. Rule 1 (bakery and M5 within +10% of the best baseline, |bias| <= 30%) NOT PASSED: trained on all other datasets it still over-forecasts the bakery
+(bias +195%, WAPE 2.10) and M5 (+44%, 0.651), so the blow-up comes from mixing data of very different kinds, not from the ratio target. Rule 2 (other four not worse than the ratio model) passed.
+What does work is the offset model trained on M5 alone: M5 0.328 (best), hierarchical 0.446 (best simple 0.485), Rohlik 0.217, Online Retail 0.604, but the bakery 0.382 and Rossmann 0.178 are worse than baselines.
+Not used by the app.
+
+**6. Service level calibrated on the file's own backtest** (`src/demand/service_level.py`). Safety factor z found by running the order-up-to simulator on the backtest forecasts of
+the selected method instead of using the M5 table. Check on the open datasets (95% target, lead time 3 d, three windows each, realised on the window that followed):
+
+| | mean |gap to 95% fill| | mean realised fill | mean inventory, days of sales |
+|---|---|---|---|
+| M5 z (current) | 0.070 | 90.5% | 5.7 |
+| file z | **0.020** | **95.4%** | 13.5 |
+
+Declared rule (smaller gap AND inventory at most +10%): NOT PASSED. The file z hits the target (M5 z gives 76% on Online Retail and 89.5% on hierarchical), but on those two files reaching 95% needs
+23-27 days of stock, which is what the data demands, not a bargain. On the bakery and Rossmann it needs less stock than the M5 z at the same fill (-11% and -38%) and Rossmann's M5 z overshoots to 99.6%.
+Not wired into the app: showing the realised-fill estimate to the user and letting them cap inventory is a product decision.
+
 ## Report and slides (`docs/`)
 
 - `docs/Demand_Copilot_report.docx`: technical report in Russian (task, data, methods, experiments, app and 5-minute demo script,

@@ -140,3 +140,19 @@ def predict_weekly(model, Y: np.ndarray, first_idx: np.ndarray) -> np.ndarray:
     tot = prof.sum(axis=2, keepdims=True)
     share = np.where(tot > 0, prof / np.where(tot > 0, tot, 1), 1 / 7)
     return (weekly[:, :, None] * share).reshape(Y.shape[0], 28)
+
+
+# ---------- exposure-offset model: counts as targets, log(level) as offset, no ratio targets (works for tiny volumes) ----------
+OFFSET_FEATURES = [f for f in FEATURES if f != "logscale"]
+OFFSET_PARAMS = {**PARAMS, "objective": "tweedie", "tweedie_variance_power": 1.2}
+
+
+def fit_offset(frame: pd.DataFrame):
+    import lightgbm as lgb
+    return lgb.LGBMRegressor(**OFFSET_PARAMS).fit(frame[OFFSET_FEATURES], frame.y * frame.scale, init_score=np.log(frame.scale.to_numpy()))
+
+
+def predict_offset(model, Y: np.ndarray, first_idx: np.ndarray) -> np.ndarray:
+    rows = rows_at(Y, first_idx, Y.shape[1], with_target=False)
+    raw = model.predict(rows[OFFSET_FEATURES], raw_score=True) + np.log(rows["scale"].to_numpy())
+    return np.exp(raw).reshape(Y.shape[0], HORIZON)

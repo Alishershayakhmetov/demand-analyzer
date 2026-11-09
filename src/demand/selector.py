@@ -90,11 +90,14 @@ def select(shop: S.Shop, booster, features, limit, norm_model=None, weekly_model
         raws.append((o, fc))
     final_raw, guard = raw_candidates(shop, T, booster, features, limit, norm_model, weekly_model, use_chronos)
     scores: dict[str, list[float]] = {}
+    combos = []
     for i, (o, fc) in enumerate(raws):
         actual = shop.Y[:, o:o + HORIZON]
         others = [(shop.Y[:, o2:o2 + HORIZON], fc2["Chronos-Bolt"]) for j, (o2, fc2) in enumerate(raws) if j != i and "Chronos-Bolt" in fc2]
         corr = _multiplier([a for a, _ in others], [f for _, f in others])  # leave-one-window-out, so the score is honest
-        for name, f in _combine(fc, fc["weekday average"], corr).items():
+        combo = _combine(fc, fc["weekday average"], corr)
+        combos.append(combo)
+        for name, f in combo.items():
             scores.setdefault(name, []).append(M.wape(M.block_sums(actual), M.block_sums(f)))
     all_corr = _multiplier([shop.Y[:, o:o + HORIZON] for o, _ in raws], [fc["Chronos-Bolt"] for _, fc in raws]) if use_chronos and raws else None
     final = _combine(final_raw, final_raw["weekday average"], all_corr if len(raws) >= 2 else None)
@@ -113,4 +116,5 @@ def select(shop: S.Shop, booster, features, limit, norm_model=None, weekly_model
         chosen = ranked[:top_k]
     f = np.mean([final[k] for k in chosen], axis=0)
     use_guard = guard if "LightGBM (M5)" in chosen else np.zeros(len(shop.ids), bool)
-    return f, use_guard, dict(method=" + ".join(chosen), reason="backtest", backtest={k: round(mean[k], 4) for k in ranked}, windows=len(raws))
+    bt = [(o, np.mean([c[k] for k in chosen], axis=0)) for (o, _), c in zip(raws, combos)]  # backtest forecasts of the answer, for service-level calibration
+    return f, use_guard, dict(method=" + ".join(chosen), reason="backtest", backtest={k: round(mean[k], 4) for k in ranked}, windows=len(raws), _bt=bt)
