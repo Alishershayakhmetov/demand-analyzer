@@ -1,0 +1,48 @@
+dataset,method,windows,weekly,daily,bias
+m5_CA_1,seasonal naive,3,0.404,0.824,-0.0144
+m5_CA_1,28-day average,3,0.3374,0.6849,-0.0307
+m5_CA_1,weekday average 8w,3,0.3433,0.6769,-0.0417
+m5_CA_1,norm-M5,3,0.3324,0.6622,-0.0454
+m5_CA_1,norm-multi,3,0.8055,1.1385,0.6008
+m5_CA_1,chronos,3,0.4142,0.6394,-0.2688
+m5_CA_1,ensemble,3,0.4423,0.769,0.0968
+hierarchical_sales,seasonal naive,3,0.5575,1.0356,0.0379
+hierarchical_sales,28-day average,3,0.5279,0.8521,0.1042
+hierarchical_sales,weekday average 8w,3,0.4853,0.8526,0.0751
+hierarchical_sales,norm-M5,3,0.4682,0.805,0.024
+hierarchical_sales,norm-multi,3,0.5086,0.8372,0.1112
+hierarchical_sales,chronos,3,0.4099,0.7195,-0.2339
+hierarchical_sales,current service,3,0.4415,0.7912,-0.0267
+hierarchical_sales,ensemble,3,0.4324,0.7739,-0.0159
+bakery_daily,seasonal naive,2,0.257,0.5257,-0.0117
+bakery_daily,28-day average,2,0.2374,0.5186,0.0316
+bakery_daily,weekday average 8w,2,0.2676,0.4917,-0.0391
+bakery_daily,norm-M5,2,0.3782,0.5798,-0.1525
+bakery_daily,norm-multi,2,3.6659,3.9271,3.4693
+bakery_daily,chronos,2,0.2899,0.4649,-0.0766
+bakery_daily,current service,2,0.2789,0.5214,0.0359
+bakery_daily,ensemble,2,1.3841,1.6047,1.1179
+rohlik_prague1_top300,seasonal naive,3,0.2406,0.3204,-0.0233
+rohlik_prague1_top300,28-day average,3,0.2291,0.299,-0.0161
+rohlik_prague1_top300,weekday average 8w,3,0.2271,0.2797,-0.0151
+rohlik_prague1_top300,norm-M5,3,0.2252,0.3096,-0.1001
+rohlik_prague1_top300,norm-multi,3,0.2183,0.2909,-0.0763
+rohlik_prague1_top300,chronos,3,0.1988,0.2549,-0.0946
+rohlik_prague1_top300,current service,3,0.2242,0.2766,-0.0201
+rohlik_prague1_top300,ensemble,3,0.2036,0.2598,-0.062
+online_retail_ii_top300_invoice_lines,seasonal naive,3,0.7559,1.2541,-0.0155
+online_retail_ii_top300_invoice_lines,28-day average,3,0.6015,1.0107,-0.1482
+online_retail_ii_top300_invoice_lines,weekday average 8w,3,0.6088,0.9711,-0.1762
+online_retail_ii_top300_invoice_lines,norm-M5,3,0.6031,1.0163,-0.2018
+online_retail_ii_top300_invoice_lines,norm-multi,3,0.6538,1.0518,-0.0511
+online_retail_ii_top300_invoice_lines,chronos,3,0.6731,0.8479,-0.6076
+online_retail_ii_top300_invoice_lines,current service,3,0.604,0.9814,-0.2603
+online_retail_ii_top300_invoice_lines,ensemble,3,0.5876,0.9111,-0.2783
+rossmann_300_stores_euro,seasonal naive,3,0.1894,0.3677,-0.0792
+rossmann_300_stores_euro,28-day average,3,0.1534,0.4004,-0.0253
+rossmann_300_stores_euro,weekday average 8w,3,0.1536,0.2216,-0.0235
+rossmann_300_stores_euro,norm-M5,3,0.1533,0.4592,-0.0271
+rossmann_300_stores_euro,norm-multi,3,0.208,0.2841,-0.1895
+rossmann_300_stores_euro,chronos,3,0.1599,0.2171,-0.0116
+rossmann_300_stores_euro,current service,3,0.1536,0.2216,-0.0235
+rossmann_300_stores_euro,ensemble,3,0.1587,0.223,-0.0749

@@ -356,6 +356,30 @@ What this says:
 - Conclusion for use: the service can forecast other data, but outside M5-like volumes (a few units per item and day) the model is not better than a
   28-day or weekday average, and the claim from the test fold stays: its advantage over simple methods is small and unstable.
 
+## Methods for "any data" (`src/demand/universal.py`, `scripts/20_universal_lodo.py`, `reports/universal_lodo.txt`)
+
+Tried three methods (extra packages in `requirements-extra.txt`): scale-normalised LightGBM trained on M5 only (norm-M5), the same trained on all
+other datasets plus three more M5 stores (norm-multi, leave-one-dataset-out), and Chronos-Bolt-small zero-shot. Six datasets, up to three 28-day
+windows each, weekly WAPE. Success rules were declared in the script before the run. **Both rules were NOT passed.**
+
+| Weekly WAPE | M5 | hierarchical | bakery | Rohlik | Online Retail | Rossmann |
+|---|---|---|---|---|---|---|
+| best simple baseline | 0.337 | 0.485 | 0.237 | 0.227 | 0.602 | 0.153 |
+| current service (M5 model + guard) | n/a | 0.441 | 0.279 | 0.224 | 0.604 | 0.154 |
+| norm-M5 | **0.332** | 0.468 | 0.378 | 0.225 | 0.603 | 0.153 |
+| norm-multi | 0.805 | 0.509 | 3.666 | 0.218 | 0.654 | 0.208 |
+| Chronos-Bolt | 0.414 | **0.410** | 0.290 | **0.199** | 0.673 | 0.160 |
+| ensemble (norm-multi + Chronos + weekday avg) | 0.442 | 0.432 | 1.384 | 0.204 | 0.588 | 0.159 |
+
+- Chronos is the best on hierarchical and Rohlik (-15% and -12% against the best baseline) but is worse than baselines on M5 (+23%), the bakery
+  and Online Retail, and forecasts too low (bias -27% on M5, -61% on Online Retail).
+- norm-M5 is the best on M5 itself but not outside it. norm-multi fails on tiny-volume data (bakery, M5: forecasts several times too high):
+  dividing by a level of 0.04-0.4 units a day makes the ratios huge, and mixing high-volume data into training did not fix that. It dragged the ensemble down.
+- No method is good everywhere, so "works excellently on any data" is not achieved. What these results support is choosing the method per file by a
+  backtest on the file's own history (method 1 from the earlier proposal): the best method per dataset here is within +4% of the best baseline or better
+  everywhere except M5 and the bakery, where simple baselines or norm-M5 win. Not implemented yet. An ensemble without norm-multi was not tried,
+  because picking it now would be selection on these same results.
+
 ## Report and slides (`docs/`)
 
 - `docs/Demand_Copilot_report.docx`: technical report in Russian (task, data, methods, experiments, app and 5-minute demo script,
