@@ -1,12 +1,12 @@
 """Choose the forecasting method for an uploaded file by a backtest on the file's own history.
 
-Candidates: seasonal naive, 28-day average, weekday average (8 weeks), the M5 LightGBM with the range guard, the scale-normalised
-LightGBM, and Chronos-Bolt (if installed) alone and averaged with the weekday average. The last one or two 28-day windows of the
-history are forecast from the data before them; the method with the lowest weekly WAPE wins, but a complex method must beat the best
-simple one by at least MARGIN, otherwise the simple one is used. Files too short for a backtest get the weekday average.
+Candidates: seasonal naive, 28-day average, weekday average (8 weeks), the M5 LightGBM with the range guard, the scale-normalised LightGBM,
+the weekly-sum LightGBM, Chronos-Bolt (raw and with its bias corrected on the file), Chronos + weekday average, and Chronos + M5 LightGBM +
+weekday average. The last up to MAX_WINDOWS 28-day windows are forecast from the data before them. Final forecast = mean of the TOP_K best
+candidates by weekly WAPE (K = 1 reproduces the earlier rule: best single method, a complex one only if it beats the best simple one by MARGIN).
+Files too short for a backtest get the weekday average.
 """
 import numpy as np
-import pandas as pd
 
 from . import baselines as B
 from . import metrics as M
@@ -15,7 +15,10 @@ from . import universal as U
 from .config import HORIZON
 
 MARGIN = 0.02
+MAX_WINDOWS = 4
+TOP_K = 2
 SIMPLE = ["weekday average", "28-day average", "seasonal naive"]
+LEGACY = SIMPLE + ["LightGBM (M5)", "LightGBM (scale-normalised)", "Chronos-Bolt", "Chronos-Bolt + weekday average"]
 
 
 def chronos_available() -> bool:
@@ -39,8 +42,8 @@ def _status_fix(f: np.ndarray, Y: np.ndarray, first_idx: np.ndarray) -> np.ndarr
     return f
 
 
-def candidate_forecasts(shop: S.Shop, origin: int, booster, features, limit, norm_model, use_chronos: bool) -> tuple[dict, np.ndarray]:
-    """Forecasts of every candidate from the first `origin` days; also the mask of items the guard moved to the weekday average."""
+def raw_candidates(shop: S.Shop, origin: int, booster, features, limit, norm_model, weekly_model, use_chronos: bool) -> tuple[dict, np.ndarray]:
+    """Forecasts of every candidate (Chronos not yet bias-corrected) from the first `origin` days, and the guard mask of the M5 LightGBM."""
     hist = shop.Y[:, :origin]
     first = np.minimum(shop.first_idx, origin)
     sh = S.Shop(shop.ids, shop.dates[:origin], hist, None, first)
@@ -50,31 +53,64 @@ def candidate_forecasts(shop: S.Shop, origin: int, booster, features, limit, nor
     out["LightGBM (M5)"] = lg
     if norm_model is not None:
         out["LightGBM (scale-normalised)"] = U.predict_normalised(norm_model, hist, first)
+    if weekly_model is not None:
+        out["LightGBM (weekly)"] = U.predict_weekly(weekly_model, hist, first)
     if use_chronos:
-        ch = U.chronos_forecast(hist)
-        out["Chronos-Bolt"] = ch
+        out["Chronos-Bolt"] = U.chronos_forecast(hist)
+    return {k: (v if k == "LightGBM (M5)" else _status_fix(v, hist, first)) for k, v in out.items()}, guard
+
+
+def _combine(fc: dict, wd8: np.ndarray, corr: float | None) -> dict:
+    """Add the methods derived from others: bias-corrected Chronos and the averages with Chronos."""
+    out = dict(fc)
+    if "Chronos-Bolt" in fc:
+        ch = fc["Chronos-Bolt"]
         out["Chronos-Bolt + weekday average"] = (ch + wd8) / 2
-    return {k: _status_fix(v, hist, first) if k not in ("LightGBM (M5)",) else v for k, v in out.items()}, guard
+        out["Chronos-Bolt + LightGBM (M5) + weekday average"] = (ch + fc["LightGBM (M5)"] + wd8) / 3
+        if corr is not None:
+            out["Chronos-Bolt (bias-corrected)"] = ch * corr
+    return out
 
 
-def select(shop: S.Shop, booster, features, limit, norm_model=None, use_chronos: bool | None = None) -> tuple[np.ndarray, np.ndarray, dict]:
-    """Returns (forecast for the next 28 days, guard mask (only for the M5 LightGBM), info dict)."""
+def _multiplier(actual: list[np.ndarray], fc: list[np.ndarray]) -> float | None:
+    if not actual:
+        return None
+    return float(np.clip(sum(a.sum() for a in actual) / max(sum(f.sum() for f in fc), 1e-9), 0.5, 3.0))
+
+
+def select(shop: S.Shop, booster, features, limit, norm_model=None, weekly_model=None, use_chronos: bool | None = None,
+           max_windows: int = MAX_WINDOWS, top_k: int = TOP_K, names: list[str] | None = None) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Returns (forecast for the next 28 days, guard mask (only if the M5 LightGBM is part of the answer), info dict)."""
     use_chronos = chronos_available() if use_chronos is None else use_chronos
     T = shop.Y.shape[1]
-    origins = [T - HORIZON * (k + 1) for k in range(2) if T - HORIZON * (k + 1) >= U.MIN_HISTORY]
-    scores: dict[str, list[float]] = {}
+    origins = [T - HORIZON * (k + 1) for k in range(max_windows) if T - HORIZON * (k + 1) >= U.MIN_HISTORY]
+    raws = []
     for o in origins:
-        fc, _ = candidate_forecasts(shop, o, booster, features, limit, norm_model, use_chronos)
+        fc, _ = raw_candidates(shop, o, booster, features, limit, norm_model, weekly_model, use_chronos)
+        raws.append((o, fc))
+    final_raw, guard = raw_candidates(shop, T, booster, features, limit, norm_model, weekly_model, use_chronos)
+    scores: dict[str, list[float]] = {}
+    for i, (o, fc) in enumerate(raws):
         actual = shop.Y[:, o:o + HORIZON]
-        for name, f in fc.items():
+        others = [(shop.Y[:, o2:o2 + HORIZON], fc2["Chronos-Bolt"]) for j, (o2, fc2) in enumerate(raws) if j != i and "Chronos-Bolt" in fc2]
+        corr = _multiplier([a for a, _ in others], [f for _, f in others])  # leave-one-window-out, so the score is honest
+        for name, f in _combine(fc, fc["weekday average"], corr).items():
             scores.setdefault(name, []).append(M.wape(M.block_sums(actual), M.block_sums(f)))
-    final, guard = candidate_forecasts(shop, T, booster, features, limit, norm_model, use_chronos)
+    all_corr = _multiplier([shop.Y[:, o:o + HORIZON] for o, _ in raws], [fc["Chronos-Bolt"] for _, fc in raws]) if use_chronos and raws else None
+    final = _combine(final_raw, final_raw["weekday average"], all_corr if len(raws) >= 2 else None)
+    if names is not None:
+        scores = {k: v for k, v in scores.items() if k in names}
+        final = {k: v for k, v in final.items() if k in names}
+    scores = {k: v for k, v in scores.items() if len(v) == len(raws) and k in final}
     if not scores:
         return final["weekday average"], np.zeros(len(shop.ids), bool), dict(method="weekday average", reason="short_history", backtest={}, windows=0)
     mean = {k: float(np.mean(v)) for k, v in scores.items()}
-    best_simple = min(SIMPLE, key=mean.get)
-    best = min(mean, key=mean.get)
-    method = best if best in SIMPLE or mean[best] <= mean[best_simple] * (1 - MARGIN) else best_simple
-    f = final[method]
-    return f, (guard if method == "LightGBM (M5)" else np.zeros(len(shop.ids), bool)), dict(
-        method=method, reason="backtest", backtest={k: round(v, 4) for k, v in sorted(mean.items(), key=lambda kv: kv[1])}, windows=len(origins))
+    ranked = sorted(mean, key=mean.get)
+    if top_k == 1:
+        best_simple = min(SIMPLE, key=mean.get)
+        chosen = [ranked[0] if ranked[0] in SIMPLE or mean[ranked[0]] <= mean[best_simple] * (1 - MARGIN) else best_simple]
+    else:
+        chosen = ranked[:top_k]
+    f = np.mean([final[k] for k in chosen], axis=0)
+    use_guard = guard if "LightGBM (M5)" in chosen else np.zeros(len(shop.ids), bool)
+    return f, use_guard, dict(method=" + ".join(chosen), reason="backtest", backtest={k: round(mean[k], 4) for k in ranked}, windows=len(raws))

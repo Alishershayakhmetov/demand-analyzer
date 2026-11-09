@@ -59,6 +59,13 @@ def _norm():
     return lgb.Booster(model_file=str(path)) if path.exists() else None
 
 
+@lru_cache(maxsize=1)
+def _weekly():
+    import lightgbm as lgb
+    path = S.MODEL_DIR / "weekly_model.txt"
+    return lgb.Booster(model_file=str(path)) if path.exists() else None
+
+
 def demo_available() -> bool:
     return (C.PROC / f"panel_{C.STORE}.parquet").exists()
 
@@ -133,7 +140,7 @@ def analyze(payload: dict) -> dict:
         raise UserError(str(e)) from e
     booster, meta_ = _model()
     limit = (meta_.get("level_range") or {}).get("mean28_p999")  # highest demand level the model has seen often enough
-    f, fallback, choice = selector.select(shop, booster, meta_["features"], limit, _norm())
+    f, fallback, choice = selector.select(shop, booster, meta_["features"], limit, _norm(), _weekly())
     on_hand, on_order = _stock(payload, shop)
     status = S.item_status(shop).astype(object)
     status[fallback] = "range"  # forecast by the weekday average, the model is not used for such a high demand level

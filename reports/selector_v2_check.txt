@@ -1,0 +1,32 @@
+bakery_daily w0: old -> 28-day average | new -> 28-day average + Chronos-Bolt + LightGBM (M5) + weekday average
+bakery_daily w1: old -> weekday average | new -> weekday average
+hierarchical_sales w0: old -> Chronos-Bolt | new -> Chronos-Bolt + Chronos-Bolt + weekday average
+hierarchical_sales w1: old -> Chronos-Bolt | new -> Chronos-Bolt + Chronos-Bolt + weekday average
+hierarchical_sales w2: old -> Chronos-Bolt + weekday average | new -> Chronos-Bolt + Chronos-Bolt + weekday average
+rohlik_prague1_top300 w0: old -> Chronos-Bolt | new -> Chronos-Bolt + Chronos-Bolt + weekday average
+rohlik_prague1_top300 w1: old -> Chronos-Bolt | new -> Chronos-Bolt + Chronos-Bolt + weekday average
+rohlik_prague1_top300 w2: old -> Chronos-Bolt | new -> Chronos-Bolt + Chronos-Bolt + weekday average
+online_retail_ii_top300_invoice_lines w0: old -> Chronos-Bolt + weekday average | new -> Chronos-Bolt + LightGBM (M5) + weekday average + Chronos-Bolt + weekday average
+online_retail_ii_top300_invoice_lines w1: old -> Chronos-Bolt + weekday average | new -> Chronos-Bolt + weekday average + Chronos-Bolt + LightGBM (M5) + weekday average
+online_retail_ii_top300_invoice_lines w2: old -> Chronos-Bolt + weekday average | new -> Chronos-Bolt + weekday average + Chronos-Bolt + LightGBM (M5) + weekday average
+rossmann_300_stores_euro w0: old -> Chronos-Bolt + weekday average | new -> Chronos-Bolt + LightGBM (M5) + weekday average + Chronos-Bolt + weekday average
+rossmann_300_stores_euro w1: old -> weekday average | new -> 28-day average + Chronos-Bolt (bias-corrected)
+rossmann_300_stores_euro w2: old -> weekday average | new -> Chronos-Bolt + Chronos-Bolt (bias-corrected)
+
+dataset          bakery_daily  hierarchical_sales  rohlik_prague1_top300  online_retail_ii_top300_invoice_lines  rossmann_300_stores_euro
+method                                                                                                                                   
+28-day average          0.234               0.528                  0.229                                  0.602                     0.153
+new selector            0.268               0.399                  0.195                                  0.583                     0.153
+old selector            0.269               0.422                  0.199                                  0.587                     0.156
+seasonal naive          0.254               0.558                  0.241                                  0.756                     0.189
+weekday average         0.265               0.485                  0.227                                  0.609                     0.154
+
+relative to the best simple baseline:
+dataset      bakery_daily hierarchical_sales rohlik_prague1_top300 online_retail_ii_top300_invoice_lines rossmann_300_stores_euro
+method                                                                                                                           
+old selector       +14.7%             -13.0%                -12.5%                                 -2.4%                    +1.9%
+new selector       +14.2%             -17.7%                -14.0%                                 -3.0%                    -0.5%
+
+mean relative: old -2.3%, new -4.2%
+rule (a) new mean lower: YES
+rule (b) no dataset above +3%: NO

@@ -401,6 +401,23 @@ of five files. The bakery (0.04 units per item a day, 106-134 days of history) s
 in one case and fell back to the weekday average in the other, and the real window was noisy. With so little data no method choice is reliable.
 M5 is not in this check because both shipped LightGBM models were trained on it.
 
+#### Selector v2: top-2 averaging, 4 windows, weekly-sum model, bias-corrected Chronos (`scripts/23_train_weekly.py`, `scripts/24_selector_v2_check.py`, `reports/selector_v2_check.txt`)
+
+Changes: up to 4 backtest windows instead of 2; the final forecast is the mean of the 2 best candidates instead of the single best; three new candidates
+(a LightGBM trained directly on weekly sums and spread over days by the weekday profile, Chronos with its bias corrected by a multiplier estimated on the
+file's own backtest windows (leave-one-window-out when scoring), and Chronos + M5 LightGBM + weekday average). Compared end to end on the same three windows
+per open dataset (rule declared in the script): (a) mean relative WAPE lower - **YES**; (b) no dataset above +3% of the best simple baseline - **NO** (bakery).
+
+| Weekly WAPE vs best simple baseline | bakery | hierarchical | Rohlik | Online Retail | Rossmann | mean |
+|---|---|---|---|---|---|---|
+| old selector | +14.7% | -13.0% | -12.5% | -2.4% | +1.9% | -2.3% |
+| **new selector** | +14.2% | **-17.7%** | **-14.0%** | **-3.0%** | **-0.5%** | **-4.2%** |
+
+The gain is real but modest and comes mostly from averaging; the bakery is still 14% worse than the 28-day average (too little data to choose by backtest).
+In the M5 demo the new selector averages LightGBM (M5) and the weekly LightGBM; the plan changes from 5,059 to 5,074 units (the numbers in the report and slides
+were made before this change). The selector's candidate bias-corrected Chronos was chosen on Rossmann; the weekly-sum model was never the top choice on the open datasets
+(it ranks 2nd on M5).
+
 ## Report and slides (`docs/`)
 
 - `docs/Demand_Copilot_report.docx`: technical report in Russian (task, data, methods, experiments, app and 5-minute demo script,

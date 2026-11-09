@@ -92,3 +92,51 @@ def chronos_forecast(Y: np.ndarray, name: str = "amazon/chronos-bolt-small", con
         _, mean = _PIPE[name].predict_quantiles(ctx, prediction_length=HORIZON, quantile_levels=[0.1, 0.3, 0.5, 0.7, 0.9])
         out.append(np.clip(mean.numpy(), 0, None))
     return np.concatenate(out)
+
+
+# ---------- weekly-sum model: predicts the sum of the next 4 weeks directly, then spreads it over the days ----------
+WEEK_FEATURES = ["r7", "r14", "r28", "r56", "rstd28", "nz28", "nz91", "dsl", "age", "logscale", "w"]
+
+
+def week_rows_at(Y: np.ndarray, first_idx: np.ndarray, origin: int, with_target: bool = True) -> pd.DataFrame:
+    """Feature rows (items x 4 weeks); the target is the weekly sum divided by 7 x level."""
+    hist = Y[:, :origin]
+    n = hist.shape[0]
+    s = level(hist)
+    sold = hist[:, -91:] > 0
+    dsl = np.where(sold.any(axis=1), np.argmax(sold[:, ::-1], axis=1), 91)
+    per_item = {"r7": hist[:, -7:].mean(1) / s, "r14": hist[:, -14:].mean(1) / s, "r28": hist[:, -28:].mean(1) / s, "r56": hist[:, -56:].mean(1) / s,
+                "rstd28": hist[:, -28:].std(1) / s, "nz28": (hist[:, -28:] > 0).mean(1), "nz91": sold.mean(1), "dsl": dsl,
+                "age": np.minimum(origin - first_idx, 1000), "logscale": np.clip(np.log10(s), -1.5, 3.5)}
+    cols = {k: np.repeat(v[:, None], 4, axis=1) for k, v in per_item.items()}
+    cols["w"] = np.tile(np.arange(1, 5), (n, 1))
+    if with_target:
+        cols["y"] = Y[:, origin:origin + 28].reshape(n, 4, 7).sum(axis=2) / (7 * s[:, None])
+    df = pd.DataFrame({k: v.reshape(-1) for k, v in cols.items()})
+    df["scale"] = np.repeat(s, 4)
+    return df
+
+
+def week_training_frame(shop: Shop, last_origin: int | None = None, n_origins: int = 60, max_items: int = 300, seed: int = 0) -> pd.DataFrame:
+    T = shop.Y.shape[1]
+    last = min(T - HORIZON, last_origin if last_origin is not None else T - HORIZON)
+    rng = np.random.default_rng(seed)
+    items = np.arange(shop.Y.shape[0])
+    if len(items) > max_items:
+        items = np.sort(rng.choice(items, max_items, replace=False))
+    parts = []
+    for o in sunday_origins(shop.dates, last, n_origins):
+        keep = items[(o - shop.first_idx[items]) >= 28]
+        if len(keep):
+            parts.append(week_rows_at(shop.Y[keep], shop.first_idx[keep], o))
+    return pd.concat(parts, ignore_index=True)
+
+
+def predict_weekly(model, Y: np.ndarray, first_idx: np.ndarray) -> np.ndarray:
+    """(items, 28): weekly sums from the model, spread over the days by the weekday profile of the last 8 weeks."""
+    rows = week_rows_at(Y, first_idx, Y.shape[1], with_target=False)
+    weekly = (np.clip(model.predict(rows[WEEK_FEATURES]), 0, None) * rows["scale"].to_numpy() * 7).reshape(Y.shape[0], 4)
+    prof = _same_weekday(Y, 8).mean(axis=2).reshape(Y.shape[0], 4, 7)
+    tot = prof.sum(axis=2, keepdims=True)
+    share = np.where(tot > 0, prof / np.where(tot > 0, tot, 1), 1 / 7)
+    return (weekly[:, :, None] * share).reshape(Y.shape[0], 28)
