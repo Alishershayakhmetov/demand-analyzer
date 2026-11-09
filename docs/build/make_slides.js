@@ -264,11 +264,11 @@ pres.addSection({ title: "Метод и результаты" });
 pres.addSection({ title: "Демо и итоги" });
 {
   const s = content("Демо: загрузил продажи — получил план", "Демо и итоги");
-  const imgH = 3.3;
-  s.addImage({ path: path.join(ROOT, "docs", "assets", "app_forecast.jpg"), x: 0.5, y: 1.4, w: imgH * 800 / 882, h: imgH, altText: "Окно приложения: прогноз по товару, рекомендация и недельный график факта и прогноза; справа панель параметров" });
-  s.addImage({ path: path.join(ROOT, "docs", "assets", "app_plan_crop.jpg"), x: 0.5 + imgH * 800 / 882 + 0.2, y: 1.4, w: imgH * 550 / 570, h: imgH, altText: "Вкладка «План закупок»: показатели и таблица заказа по товарам" });
-  s.addText("Прогноз по товару", { ...body, x: 0.5, y: 4.75, w: 3.0, h: 0.3, fontSize: 12, color: C.text2 });
-  s.addText("План закупок", { ...body, x: 0.5 + imgH * 800 / 882 + 0.2, y: 4.75, w: 3.0, h: 0.3, fontSize: 12, color: C.text2 });
+  const imgH = 2.9;
+  s.addImage({ path: path.join(ROOT, "docs", "assets", "app_forecast.jpg"), x: 0.5, y: 1.4, w: imgH * 800 / 892, h: imgH, altText: "Окно приложения: прогноз по товару, рекомендация и недельный график факта и прогноза; справа панель параметров" });
+  s.addImage({ path: path.join(ROOT, "docs", "assets", "app_plan_crop.jpg"), x: 0.5 + imgH * 800 / 892 + 0.2, y: 1.4, w: imgH * 575 / 465, h: imgH, altText: "Вкладка «План закупок»: показатели и таблица заказа по товарам" });
+  s.addText("Прогноз по товару", { ...body, x: 0.5, y: 4.4, w: 3.0, h: 0.3, fontSize: 12, color: C.text2 });
+  s.addText("План закупок", { ...body, x: 0.5 + imgH * 800 / 892 + 0.2, y: 4.4, w: 3.0, h: 0.3, fontSize: 12, color: C.text2 });
   const steps = [["Загрузить CSV", "или открыть демо на данных M5"], ["Выбрать параметры", "срок поставки, обслуживание"], ["Смотреть товар", "прогноз и рекомендация"], ["Скачать план", "таблица закупок в CSV"]];
   steps.forEach(([h1, t], i) => {
     const y = 1.4 + i * 0.92;
@@ -276,7 +276,7 @@ pres.addSection({ title: "Демо и итоги" });
     s.addText(String(i + 1), { x: 7.1, y: y + 0.08, w: 0.45, h: 0.45, fontFace: "Calibri", fontSize: 15, bold: true, color: C.background1, align: "center", valign: "middle", margin: 0, isTextBox: true });
     s.addText([{ text: h1, options: { bold: true, fontSize: 15, color: C.accent1, breakLine: true } }, { text: t, options: { fontSize: 14 } }], { ...body, x: 7.7, y, w: 1.85, h: 0.85 });
   });
-  s.addNotes("Демо ~5 мин (см. сценарий в отчёте). Запуск: streamlit run app/streamlit_app.py (порт 8501). На слайде — скриншот на случай сбоя. Шаги: открыть демо; показать данные и проверку; выбрать товар; показать график и рекомендацию; изменить срок поставки до 7 дней и уровень до 98% и показать, как меняется рекомендация; открыть вкладку плана закупок и скачать CSV; показать вкладку ограничений.");
+  s.addNotes("Демо ~5 мин (см. сценарий в отчёте). Запуск: python app/server.py (адрес http://localhost:8501). На слайде — скриншот на случай сбоя. Шаги: открыть демо; показать данные и проверку; выбрать товар; показать график и рекомендацию; изменить срок поставки до 7 дней и уровень до 98% и показать, как меняется рекомендация; открыть вкладку плана закупок и скачать CSV; показать вкладку ограничений.");
 }
 
 // 12. Limits

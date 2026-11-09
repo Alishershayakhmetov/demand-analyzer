@@ -14,7 +14,7 @@ Demand forecasting and purchase planning for a small shop. Course project, *AI E
 | SHAP, ablation | done |
 | Feature selection on dev folds | done (lean 11-feature set chosen by the rule) |
 | Inventory simulator and purchase policies | done (frontier comparison, no profit claim) |
-| Streamlit app | done (demo + CSV upload, RU/EN) |
+| Web app (no framework) | done (demo + CSV upload, RU/EN) |
 | Test fold evaluation | **scored once** (see "Test fold"): forecasts beat seasonal naive by only 6%, inventory edge did not reproduce |
 
 ## Data
@@ -284,20 +284,23 @@ What this says:
   Scored on the same fold, the stored forecast gives weekly WAPE 0.4216 (scored model 0.4221), so the difference does not matter in accuracy.
 - Not evaluated: quantile forecasts (not part of the final model), profit, another store.
 
-## App (`app/streamlit_app.py`, `src/demand/serving.py`)
+## App (`app/server.py`, `app/static/`, `src/demand/webapi.py`, `src/demand/serving.py`)
 
 ```bash
 .venv/Scripts/python scripts/14_train_final.py     # ~1 min: final model, z calibration, test-window forecast
-.venv/Scripts/streamlit run app/streamlit_app.py
+.venv/Scripts/python app/server.py                  # opens http://localhost:8501 (--port N, --no-browser)
 ```
 
-Input: a CSV with one row per item and day (date, item, units sold; an optional price column) and optionally a stock CSV
-(`item_id, on_hand, on_order`). The sidebar has a demo (M5 store CA_1 up to d1941, with synthetic stock) and an upload mode with
-column mapping. Output: a 28-day forecast per item (daily chart and weekly table), a weekly purchase plan (target level =
-forecast over lead time + 7 days + z x sigma, order = target - stock - on order), a CSV download, a quality tab with the
-precomputed backtest tables and the limits. Russian and English interface; light theme (`.streamlit/config.toml`), controls in a fixed panel on the right instead of a
-collapsible sidebar, and no Deploy button or main menu (`client.toolbarMode = "minimal"`, plus a CSS fallback in the app). Forecasts are computed live from the uploaded data;
-only the tables on the quality tab are precomputed.
+No web framework is needed: the pages and a small JSON API are served by the Python standard library (`http.server`), the front end is
+plain HTML, CSS and JavaScript (charts are drawn as SVG, nothing is loaded from the internet). The server listens on 127.0.0.1 only, so
+uploaded sales data stay on the computer.
+
+Input: a CSV with one row per item and day (date, item, units sold; an optional price column; comma, semicolon or tab separated) and
+optionally a stock CSV (`item_id, on_hand, on_order`). The panel on the right has a demo (M5 store CA_1 up to d1941, with synthetic stock)
+and an upload mode with column mapping. Output: a 28-day forecast per item (daily chart and weekly bars), a weekly purchase plan (target
+level = forecast over lead time + 7 days + z x sigma, order = target - stock - on order), a CSV download, a quality tab with the precomputed
+backtest tables and the limits. Russian and English interface, light theme, controls in a fixed panel on the right (not collapsible).
+Forecasts are computed live from the uploaded data; only the tables on the quality tab are precomputed.
 
 How it is wired:
 - The model is the selected 11-feature LightGBM trained with origins up to d1913 (days <= d1941); features come from the
@@ -314,8 +317,9 @@ How it is wired:
   Daily values are expected demand, so 99% of them are fractional (56% are below 1 unit); the weekly table is rounded.
   Lead time and service level only affect the purchase plan and the per-item recommendation, not the forecast chart.
 - The app follows the recent weeks closely: on synthetic stationary demand a random +20% week raised the forecast by a similar amount.
-- Checked: unit tests, a headless run of the app (demo, language and parameter changes, a custom CSV with other column
-  names and a Wednesday end), and the demo in the browser pane. Not checked: an upload of a real shop's data.
+- Checked: 18 unit tests (`tests/test_webapi.py` runs a semicolon-delimited CSV with other column names and a Wednesday end through
+  the API, with and without a stock file), and in the browser the demo, the language switch, lead time and service level changes,
+  the plan download and a file upload. Not checked: an upload of a real shop's data.
 
 ## Report and slides (`docs/`)
 
@@ -346,7 +350,7 @@ py -3.12 -m venv .venv
 .venv/Scripts/python scripts/13_feature_selection.py   # ~7 min, writes reports/selected_features.json
 .venv/Scripts/python scripts/16_calendar_dev.py        # ~35 min, tuned feature-set comparison on dev folds
 .venv/Scripts/python scripts/14_train_final.py         # model for the app
-.venv/Scripts/streamlit run app/streamlit_app.py
+.venv/Scripts/python app/server.py
 .venv/Scripts/python -m unittest discover -s tests
 ```
 
