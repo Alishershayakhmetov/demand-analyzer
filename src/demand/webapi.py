@@ -15,6 +15,7 @@ from . import selector
 from . import serving as S
 
 _LOCK = threading.Lock()
+_ANALYZE_LOCK = threading.Lock()  # one analysis at a time: the models (torch, LightGBM) are shared between requests
 _STATE: dict[str, dict] = {}
 _MAX_STATES = 6
 DEMO_COLS = dict(date_col="date", item_col="item_id", sales_col="sales", price_col="sell_price")
@@ -120,6 +121,11 @@ def _stock(payload: dict, shop: S.Shop) -> tuple[np.ndarray | None, np.ndarray |
 
 
 def analyze(payload: dict) -> dict:
+    with _ANALYZE_LOCK:
+        return _analyze(payload)
+
+
+def _analyze(payload: dict) -> dict:
     """payload: source 'demo' | 'csv'; for csv also csv text and cols {date, item, sales, price}; optional stock_csv or synthetic_stock."""
     if not model_available():
         raise UserError("no_model")
@@ -141,6 +147,7 @@ def analyze(payload: dict) -> dict:
     booster, meta_ = _model()
     limit = (meta_.get("level_range") or {}).get("mean28_p999")  # highest demand level the model has seen often enough
     f, fallback, choice = selector.select(shop, booster, meta_["features"], limit, _norm(), _weekly())
+    backtest_forecasts = choice.pop("_bt", None)  # numpy arrays, kept in the session state only, not sent to the browser
     on_hand, on_order = _stock(payload, shop)
     status = S.item_status(shop).astype(object)
     status[fallback] = "range"  # forecast by the weekday average, the model is not used for such a high demand level
@@ -157,7 +164,7 @@ def analyze(payload: dict) -> dict:
     with _LOCK:
         while len(_STATE) >= _MAX_STATES:
             _STATE.pop(next(iter(_STATE)))
-        _STATE[token] = dict(shop=shop, f=f, on_hand=on_hand, on_order=on_order, status=status, calibration=meta_["calibration"])
+        _STATE[token] = dict(shop=shop, f=f, on_hand=on_hand, on_order=on_order, status=status, bt=backtest_forecasts, calibration=meta_["calibration"])
     return dict(token=token, notes=shop.notes, n_items=n, n_days=len(shop.dates), hist_start=str(shop.dates[-84].date()), forecast_from=str(first.date()),
                 forecast_to=str((first + pd.Timedelta(days=C.HORIZON - 1)).date()), next7=float(f[:, :7].sum()), last7=float(shop.Y[:, -7:].sum()),
                 n_new=int((status == "new").sum()), n_dormant=int((status == "dormant").sum()), n_range=int(fallback.sum()), level_limit=limit, method=choice, has_stock=on_hand is not None,

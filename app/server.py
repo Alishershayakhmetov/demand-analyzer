@@ -103,7 +103,9 @@ class Handler(BaseHTTPRequestHandler):
         except webapi.UserError as e:
             return self._json({"error": str(e)}, 400)
         except (ValueError, KeyError) as e:
-            return self._json({"error": f"bad request: {e}"}, 400)
+            import traceback
+            traceback.print_exc()  # the console shows where it failed
+            return self._json({"error": f"bad request: {type(e).__name__}: {e}"}, 400)
         except Exception as e:
             import traceback
             traceback.print_exc()

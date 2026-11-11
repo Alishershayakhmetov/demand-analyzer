@@ -2,7 +2,7 @@
 // Demand Copilot front end: plain JavaScript, no libraries; charts are drawn as SVG.
 const HIST = "#9FB1C9", FC = "#3A6EA5";
 const state = { lang: "ru", source: "demo", meta: null, csvText: null, csvName: "", header: [], cols: {}, stockText: null, stockName: "",
-  synthetic: true, lead: 3, service: 95, data: null, plan: null, tab: "fc", item: null, onlyOrder: true, busy: false, error: null, openChecks: null };
+  synthetic: true, req: 0, lead: 3, service: 95, data: null, plan: null, tab: "fc", item: null, onlyOrder: true, busy: false, error: null, openChecks: null };
 const T = () => I18N[state.lang];
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -30,16 +30,20 @@ function errorText(e) {
 }
 async function analyze() {
   if (state.source === "csv" && !state.csvText) { state.data = null; state.plan = null; state.error = null; return render(); }
+  const my = ++state.req;
   state.busy = true; state.error = null; render();
   try {
     const payload = state.source === "demo"
       ? { source: "demo", synthetic_stock: state.synthetic }
       : { source: "csv", csv: state.csvText, cols: state.cols, stock_csv: state.stockText };
     const res = await api("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (my !== state.req) return;  // a newer request was started, ignore this answer
     state.data = res;
     state.item = res.items.length ? res.items[0].id : null;
     state.plan = await api(planUrl("/api/plan"));
+    if (my !== state.req) return;
   } catch (e) {
+    if (my !== state.req) return;
     state.data = null; state.plan = null; state.error = errorText(e);
   }
   state.busy = false; render();
@@ -240,15 +244,15 @@ function qualityTab() {
 function renderMain() {
   const t = T();
   let html = `<h1>${esc(t.title)}</h1><p class="lead">${esc(t.intro)}</p>`;
-  if (state.error) html += `<div class="msg error">${esc(state.error)}</div>`;
-  if (state.busy) html += `<div class="msg spin"><span class="spinner"></span>${esc(t.calculating)}</div>`;
-  else if (!state.data && !state.error) html += `<div class="msg info">${esc(t.no_data)}</div>`;
-  if (state.data && !state.busy) {
-    const tabs = [["fc", t.tab_fc], ["plan", t.tab_plan], ["q", t.tab_quality]];
-    html += `<div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${state.tab === k}">${esc(l)}</button>`).join("")}</div>`;
-    html += state.tab === "fc" ? forecastTab() : state.tab === "plan" ? planTab() : qualityTab();
-  } else if (!state.data) {
-    html += `<div class="tabs"><button class="tab" data-tab="q" aria-selected="true">${esc(t.tab_quality)}</button></div>` + qualityTab();
+  const tabs = [["fc", t.tab_fc], ["q", t.tab_quality]];
+  if (state.tab !== "q") state.tab = "fc";
+  html += `<div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${state.tab === k}">${esc(l)}</button>`).join("")}</div>`;
+  if (state.tab === "q") html += qualityTab();
+  else {
+    if (state.error) html += `<div class="msg error">${esc(state.error)}</div>`;
+    if (state.busy) html += `<div class="msg spin"><span class="spinner"></span>${esc(t.calculating)}</div>`;
+    else if (!state.data && !state.error) html += `<div class="msg info">${esc(t.no_data)}</div>`;
+    if (state.data && !state.busy) html += forecastTab() + `<h2>${esc(t.tab_plan)}</h2>` + planTab();
   }
   const root = $("#main"), scrollY = window.scrollY;
   root.innerHTML = html;
