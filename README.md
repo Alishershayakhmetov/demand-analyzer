@@ -472,7 +472,7 @@ and events change nothing, as found before. The gain exists only when the user s
 ## Report and slides (`docs/`)
 
 - `docs/Demand_Copilot_report.docx`: technical report in Russian (task, data, methods, experiments, app and 5-minute demo script,
-  reproducibility, risks, roles table). `docs/Demand_Copilot_slides.pptx`: 14 slides with speaker notes and timing for the 6-minute talk
+  reproducibility, risks, roles table). `docs/Demand_Copilot_slides.pptx`: 15 slides with speaker notes and timing for the 6-minute talk
   (slide 11 is the demo slide with a screenshot as a fallback). Placeholders in square brackets (authors, roles, AI-use statement) must be filled in.
 - Numbers come from `reports/report_numbers.json`, written by `scripts/17_report_numbers.py` (it also draws the report figures).
   The files are built by `docs/build/make_report.js` and `docs/build/make_slides.js` (`npm install` in `docs/build` first;
