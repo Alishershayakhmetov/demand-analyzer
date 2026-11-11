@@ -438,6 +438,17 @@ Declared rule (smaller gap AND inventory at most +10%): NOT PASSED. The file z h
 23-27 days of stock, which is what the data demands, not a bargain. On the bakery and Rossmann it needs less stock than the M5 z at the same fill (-11% and -38%) and Rossmann's M5 z overshoots to 99.6%.
 Not wired into the app: showing the realised-fill estimate to the user and letting them cap inventory is a product decision.
 
+#### Corridor and new candidates (`scripts/27_bands_and_stat_check.py`, `reports/bands_and_stat_check.txt`)
+
+**1. Weekly 80% corridor.** The weekly forecast of each item now comes with an interval drawn on the weekly bar chart: empirical 10% and 90% quantiles of the standardised weekly error
+((actual - forecast) / sqrt(forecast + 1)) of the chosen method on the file's own backtest windows. Realised coverage on the next window, three windows per dataset:
+bakery 82%, hierarchical 81%, Rohlik 81%, Online Retail 77%, Rossmann 81% (mean 80.2%, target 80%). **Rule 1 passed.**
+
+**2. New candidates in the selector:** MSTL (weekly season + trend) and TSB from statsforecast, and "last year, level-adjusted" (the same 28 days a year earlier scaled by the recent level;
+needs more than 455 days of history). Mean relative WAPE vs the best simple baseline: v2 -4.2%, **v3 -9.1%**, all of the change from Rossmann (-0.5% -> -24.8%, strong yearly pattern; the selector picks "last year").
+The other four datasets are unchanged to the third decimal. **Rule 2 NOT PASSED:** it also demanded an improvement on Online Retail II, where none of the new candidates helped
+(its history, 706 days, holds only one earlier Christmas and the model cannot tell the rise from noise). The first call on the demo now takes about 45 s (warm) because of the extra candidates.
+
 ## Report and slides (`docs/`)
 
 - `docs/Demand_Copilot_report.docx`: technical report in Russian (task, data, methods, experiments, app and 5-minute demo script,

@@ -177,9 +177,9 @@ function lineChart(hist, fc, histStart, fcStart) {
     hit.addEventListener("mouseleave", () => { hideTip(); cur.setAttribute("visibility", "hidden"); });
   } };
 }
-function barChart(labels, past, ahead) {
+function barChart(labels, past, ahead, lo, hi) {
   const W = 760, H = 230, L = 44, R = 12, Tp = 18, B = 28, n = labels.length;
-  const vals = [...past, ...ahead], ticks = niceTicks(Math.max(...vals) * 1.1), ymax = ticks[ticks.length - 1];
+  const vals = [...past, ...ahead], ticks = niceTicks(Math.max(...vals, ...(hi || []).filter((v) => v != null)) * 1.1), ymax = ticks[ticks.length - 1];
   const Y = (v) => Tp + (1 - v / ymax) * (H - Tp - B), bw = (W - L - R) / n;
   let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(T().weekly)}"><g class="axis">`;
   ticks.forEach((v) => { svg += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#DDE4EE"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${fmt(v, v < 10 ? 1 : 0)}</text>`; });
@@ -188,8 +188,14 @@ function barChart(labels, past, ahead) {
     svg += `<rect x="${x}" y="${y}" width="${w}" height="${H - B - y}" fill="${col}" rx="2"><title>${labels[i]}: ${fmt(v, 1)}</title></rect>` +
       `<text x="${x + w / 2}" y="${y - 4}" text-anchor="middle">${fmt(v, v < 10 ? 1 : 0)}</text><text x="${x + w / 2}" y="${H - 8}" text-anchor="middle">${labels[i]}</text>`;
   });
+  if (lo && hi && lo[0] != null) {
+    ahead.forEach((v, j) => {
+      const i = past.length + j, cx = L + i * bw + bw / 2, y1 = Y(hi[j]), y2 = Y(lo[j]);
+      svg += `<g stroke="#1F2D45" stroke-width="1.6"><line x1="${cx}" x2="${cx}" y1="${y1}" y2="${y2}"/><line x1="${cx - 6}" x2="${cx + 6}" y1="${y1}" y2="${y1}"/><line x1="${cx - 6}" x2="${cx + 6}" y1="${y2}" y2="${y2}"/><title>${labels[i]}: ${fmt(lo[j], 0)} – ${fmt(hi[j], 0)}</title></g>`;
+    });
+  }
   svg += "</g></svg>";
-  return `<div class="chart">${svg}<div class="legend"><span><i class="dot" style="background:${HIST}"></i>${esc(T().week_actual)}</span><span><i class="dot" style="background:${FC}"></i>${esc(T().week_forecast)}</span></div></div>`;
+  return `<div class="chart">${svg}<div class="legend"><span><i class="dot" style="background:${HIST}"></i>${esc(T().week_actual)}</span><span><i class="dot" style="background:${FC}"></i>${esc(T().week_forecast)}</span>${lo && lo[0] != null ? `<span>┬ ${esc(T().band_label)}</span>` : ""}</div></div>`;
 }
 
 // ---------- main view ----------
@@ -213,7 +219,7 @@ function forecastTab() {
   const weeklyRows = starts.map((ms, i) => `<tr><td>${new Date(ms).toISOString().slice(0, 10)}</td><td>${esc(i < 4 ? t.week_actual : t.week_forecast)}</td><td>${fmt(vals[i], vals[i] < 10 ? 1 : 0)}</td></tr>`).join("");
   return checks + `<div class="metrics">${metric(t.next7, fmt(d.next7))}${metric(t.last7, fmt(d.last7))}</div>` +
     `<label class="field" for="item">${esc(t.pick)}</label><select id="item">${d.items.map((x) => `<option${x.id === it.id ? " selected" : ""}>${esc(x.id)}</option>`).join("")}</select>` +
-    `<h2>${esc(t.daily)}</h2><p class="note">${esc(t.chart_note)}</p>${chart.html}${rec}<h2>${esc(t.weekly)}</h2>${barChart(starts.map(shortLabel), it.past, it.ahead)}` +
+    `<h2>${esc(t.daily)}</h2><p class="note">${esc(t.chart_note)}</p>${chart.html}${rec}<h2>${esc(t.weekly)}</h2>${barChart(starts.map(shortLabel), it.past, it.ahead, it.lo, it.hi)}` +
     `<table class="t" style="max-width:420px;margin-top:10px"><thead><tr><th>${esc(t.week)}</th><th>${esc(t.kind)}</th><th>${esc(t.units)}</th></tr></thead><tbody>${weeklyRows}</tbody></table>` +
     `<div class="msg info">${esc(t.flat_note)}</div>`;
 }

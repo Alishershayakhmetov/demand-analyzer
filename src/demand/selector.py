@@ -42,7 +42,56 @@ def _status_fix(f: np.ndarray, Y: np.ndarray, first_idx: np.ndarray) -> np.ndarr
     return f
 
 
-def raw_candidates(shop: S.Shop, origin: int, booster, features, limit, norm_model, weekly_model, use_chronos: bool) -> tuple[dict, np.ndarray]:
+def stat_available() -> bool:
+    try:
+        import statsforecast  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+def stat_forecasts(hist: np.ndarray, first: np.ndarray, ids: list[str], max_len: int = 365) -> dict[str, np.ndarray]:
+    """MSTL (weekly season + trend) and TSB (intermittent demand) from statsforecast; a year of context is enough."""
+    import pandas as pd
+    from statsforecast import StatsForecast
+    from statsforecast.models import MSTL, TSB
+    t = hist.shape[1]
+    frames, ok = [], []
+    for i, item in enumerate(ids):
+        start = int(max(first[i], t - max_len)) if first[i] < t else t - 28
+        y = hist[i, start:]
+        if len(y) >= 60 and y.sum() > 0:  # the models need some history; shorter series get their mean below
+            frames.append(pd.DataFrame({"unique_id": item, "ds": pd.date_range("2000-01-01", periods=len(y)), "y": y.astype(float)}))
+            ok.append(i)
+    out = {}
+    if not frames:
+        return out
+    ok = np.array(ok)
+    mean = np.repeat(hist[:, -28:].mean(axis=1, keepdims=True), HORIZON, axis=1)
+    for name, model in ("MSTL (weekly season + trend)", MSTL(season_length=7)), ("TSB", TSB(alpha_d=0.2, alpha_p=0.2)):
+        try:
+            fc = StatsForecast(models=[model], freq="D", n_jobs=1).forecast(df=pd.concat(frames, ignore_index=True), h=HORIZON)
+        except Exception:
+            continue  # a model that fails on this file is simply not a candidate
+        fc["h"] = fc.groupby("unique_id").cumcount()
+        col = [c for c in fc.columns if c not in ("unique_id", "ds", "h")][0]
+        res = mean.copy()
+        res[ok] = np.clip(fc.pivot(index="unique_id", columns="h", values=col).loc[[ids[i] for i in ok]].to_numpy(), 0, None)
+        out[name] = res
+    return out
+
+
+def last_year(hist: np.ndarray) -> np.ndarray | None:
+    """The same 28 days one year earlier, scaled by how the recent level compares with the level back then."""
+    o = hist.shape[1]
+    if o < 364 + 91:
+        return None
+    ref = hist[:, o - 364:o - 364 + HORIZON]
+    ratio = np.clip((hist[:, -28:].mean(1) + 0.05) / (hist[:, o - 364 - 28:o - 364].mean(1) + 0.05), 0.3, 3.0)
+    return ref * ratio[:, None]
+
+
+def raw_candidates(shop: S.Shop, origin: int, booster, features, limit, norm_model, weekly_model, use_chronos: bool, use_stat: bool = False) -> tuple[dict, np.ndarray]:
     """Forecasts of every candidate (Chronos not yet bias-corrected) from the first `origin` days, and the guard mask of the M5 LightGBM."""
     hist = shop.Y[:, :origin]
     first = np.minimum(shop.first_idx, origin)
@@ -57,6 +106,11 @@ def raw_candidates(shop: S.Shop, origin: int, booster, features, limit, norm_mod
         out["LightGBM (weekly)"] = U.predict_weekly(weekly_model, hist, first)
     if use_chronos:
         out["Chronos-Bolt"] = U.chronos_forecast(hist)
+    if use_stat:
+        out.update(stat_forecasts(hist, first, shop.ids))
+        ly = last_year(hist)
+        if ly is not None:
+            out["Last year (level-adjusted)"] = ly
     return {k: (v if k == "LightGBM (M5)" else _status_fix(v, hist, first)) for k, v in out.items()}, guard
 
 
@@ -79,16 +133,17 @@ def _multiplier(actual: list[np.ndarray], fc: list[np.ndarray]) -> float | None:
 
 
 def select(shop: S.Shop, booster, features, limit, norm_model=None, weekly_model=None, use_chronos: bool | None = None,
-           max_windows: int = MAX_WINDOWS, top_k: int = TOP_K, names: list[str] | None = None) -> tuple[np.ndarray, np.ndarray, dict]:
+           max_windows: int = MAX_WINDOWS, top_k: int = TOP_K, names: list[str] | None = None, use_stat: bool | None = None) -> tuple[np.ndarray, np.ndarray, dict]:
     """Returns (forecast for the next 28 days, guard mask (only if the M5 LightGBM is part of the answer), info dict)."""
     use_chronos = chronos_available() if use_chronos is None else use_chronos
+    use_stat = stat_available() if use_stat is None else use_stat
     T = shop.Y.shape[1]
     origins = [T - HORIZON * (k + 1) for k in range(max_windows) if T - HORIZON * (k + 1) >= U.MIN_HISTORY]
     raws = []
     for o in origins:
-        fc, _ = raw_candidates(shop, o, booster, features, limit, norm_model, weekly_model, use_chronos)
+        fc, _ = raw_candidates(shop, o, booster, features, limit, norm_model, weekly_model, use_chronos, use_stat)
         raws.append((o, fc))
-    final_raw, guard = raw_candidates(shop, T, booster, features, limit, norm_model, weekly_model, use_chronos)
+    final_raw, guard = raw_candidates(shop, T, booster, features, limit, norm_model, weekly_model, use_chronos, use_stat)
     scores: dict[str, list[float]] = {}
     combos = []
     for i, (o, fc) in enumerate(raws):
@@ -117,4 +172,7 @@ def select(shop: S.Shop, booster, features, limit, norm_model=None, weekly_model
     f = np.mean([final[k] for k in chosen], axis=0)
     use_guard = guard if "LightGBM (M5)" in chosen else np.zeros(len(shop.ids), bool)
     bt = [(o, np.mean([c[k] for k in chosen], axis=0)) for (o, _), c in zip(raws, combos)]  # backtest forecasts of the answer, for service-level calibration
-    return f, use_guard, dict(method=" + ".join(chosen), reason="backtest", backtest={k: round(mean[k], 4) for k in ranked}, windows=len(raws), _bt=bt)
+    res = [((shop.Y[:, o:o + HORIZON]).reshape(-1, 4, 7).sum(2), g.reshape(-1, 4, 7).sum(2)) for o, g in bt]
+    e = np.concatenate([((a - g) / np.sqrt(g + 1)).ravel() for a, g in res])
+    band = (float(np.quantile(e, 0.10)), float(np.quantile(e, 0.90)))  # empirical 80% interval of the standardised weekly error
+    return f, use_guard, dict(band=band, method=" + ".join(chosen), reason="backtest", backtest={k: round(mean[k], 4) for k in ranked}, windows=len(raws), _bt=bt)

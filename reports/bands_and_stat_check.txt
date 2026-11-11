@@ -1,0 +1,41 @@
+bakery_daily w0: v3 -> 28-day average + Chronos-Bolt + LightGBM (M5) + weekday average
+bakery_daily w1: v3 -> weekday average
+hierarchical_sales w0: v3 -> Chronos-Bolt + Chronos-Bolt + weekday average
+hierarchical_sales w1: v3 -> Chronos-Bolt + Chronos-Bolt + weekday average
+hierarchical_sales w2: v3 -> Chronos-Bolt + Chronos-Bolt + weekday average
+rohlik_prague1_top300 w0: v3 -> Chronos-Bolt + Chronos-Bolt + weekday average
+rohlik_prague1_top300 w1: v3 -> Chronos-Bolt + Chronos-Bolt + weekday average
+rohlik_prague1_top300 w2: v3 -> Chronos-Bolt + Chronos-Bolt + weekday average
+online_retail_ii_top300_invoice_lines w0: v3 -> Chronos-Bolt + LightGBM (M5) + weekday average + Chronos-Bolt + weekday average
+online_retail_ii_top300_invoice_lines w1: v3 -> Chronos-Bolt + weekday average + Chronos-Bolt + LightGBM (M5) + weekday average
+online_retail_ii_top300_invoice_lines w2: v3 -> Chronos-Bolt + weekday average + Chronos-Bolt + LightGBM (M5) + weekday average
+rossmann_300_stores_euro w0: v3 -> Last year (level-adjusted) + Chronos-Bolt + LightGBM (M5) + weekday average
+rossmann_300_stores_euro w1: v3 -> Last year (level-adjusted) + 28-day average
+rossmann_300_stores_euro w2: v3 -> Last year (level-adjusted) + MSTL (weekly season + trend)
+
+Weekly WAPE
+dataset          bakery_daily  hierarchical_sales  rohlik_prague1_top300  online_retail_ii_top300_invoice_lines  rossmann_300_stores_euro
+method                                                                                                                                   
+28-day average          0.234               0.528                  0.229                                  0.602                     0.153
+seasonal naive          0.254               0.558                  0.241                                  0.756                     0.189
+selector v2             0.268               0.399                  0.195                                  0.583                     0.153
+selector v3             0.268               0.399                  0.195                                  0.583                     0.115
+weekday average         0.265               0.485                  0.227                                  0.609                     0.154
+
+relative to best simple baseline
+dataset     bakery_daily hierarchical_sales rohlik_prague1_top300 online_retail_ii_top300_invoice_lines rossmann_300_stores_euro
+method                                                                                                                          
+selector v2       +14.2%             -17.7%                -14.0%                                 -3.0%                    -0.5%
+selector v3       +14.2%             -17.7%                -14.0%                                 -3.0%                   -24.8%
+mean: v2 -4.2%, v3 -9.1%
+
+Corridor coverage (target 80%)
+dataset
+bakery_daily                             0.820
+hierarchical_sales                       0.806
+online_retail_ii_top300_invoice_lines    0.768
+rohlik_prague1_top300                    0.809
+rossmann_300_stores_euro                 0.808
+mean 0.802
+rule 1 (corridor): PASSED
+rule 2 (new candidates): NOT PASSED

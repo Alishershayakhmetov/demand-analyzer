@@ -154,10 +154,18 @@ def _analyze(payload: dict) -> dict:
     n = len(shop.ids)
     order = np.argsort(-shop.Y[:, -28:].sum(axis=1), kind="stable")
     first = shop.dates[-1] + pd.Timedelta(days=1)
+    ahead = f.reshape(n, 4, 7).sum(axis=2)
+    if choice.get("band"):  # weekly 80% corridor from the backtest errors of the chosen method
+        ql, qh = choice["band"]
+        lo = np.round(np.clip(ahead + ql * np.sqrt(ahead + 1), 0, None), 1).tolist()
+        hi = np.round(np.clip(ahead + qh * np.sqrt(ahead + 1), 0, None), 1).tolist()
+    else:
+        lo = hi = [None] * n
     items = []
     for i in order:
         items.append(dict(id=shop.ids[i], status=str(status[i]), hist=[int(v) if float(v).is_integer() else round(float(v), 2) for v in shop.Y[i, -84:]],
                           fc=[round(float(v), 2) for v in f[i]],
+                          lo=lo[i], hi=hi[i],
                           past=[round(float(v), 1) for v in shop.Y[i, -28:].reshape(4, 7).sum(axis=1)],
                           ahead=[round(float(v), 1) for v in f[i].reshape(4, 7).sum(axis=1)]))
     token = uuid.uuid4().hex
