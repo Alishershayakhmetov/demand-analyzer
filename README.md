@@ -449,6 +449,26 @@ needs more than 455 days of history). Mean relative WAPE vs the best simple base
 The other four datasets are unchanged to the third decimal. **Rule 2 NOT PASSED:** it also demanded an improvement on Online Retail II, where none of the new candidates helped
 (its history, 706 days, holds only one earlier Christmas and the model cannot tell the rise from noise). The first call on the demo now takes about 45 s (warm) because of the extra candidates.
 
+#### Item 3: price, promotion and holiday columns (`src/demand/covariate.py`, `scripts/28_covariate_examples.py`, `scripts/29_covariate_check.py`, `reports/covariate_check.txt`)
+
+The file may now have columns for price, promotion or discount and a holiday/event flag (0/1), and rows for the next 28 days that carry these columns with empty sales.
+If the future rows are there, the selector gets one more candidate: a LightGBM **trained on the file itself** (counts as targets, log level as offset; features: item level, weekday,
+relative price and its change, promotion and its recent mean, holiday flag and its neighbours), alone and averaged with Chronos. Without future rows nothing changes. In the app
+the upload mode has selectors for the two new columns; example files with covariates and future rows: `rohlik_with_future.csv`, `rossmann_with_future.csv`, `m5_with_future.csv`.
+
+Check on three datasets with real covariates (three 28-day windows each; the file holds the covariates of the window but not its sales; rules declared in the script;
+for M5 the M5-trained candidates are excluded). Weekly WAPE relative to the best simple baseline:
+
+| | Rohlik (price, 7 discount types, holidays) | Rossmann (promo, holidays) | M5 (price, SNAP, events) | mean |
+|---|---|---|---|---|
+| selector without covariates | -14.0% | -24.8% | -0.6% | -13.1% |
+| **selector with covariates** | **-27.9%** | **-31.5%** | +0.4% | **-19.7%** |
+| covariate model alone | -25.1% | +7.1% | -0.7% | |
+
+**Rule (a) passed** (mean 19.7% against 13.1% below the best baseline). **Rule (b) NOT PASSED:** the covariate model alone is not better than the weekday average on Rossmann (0.164 against 0.154),
+because it does not know the yearly pattern; averaged with "last year" in the selector it still wins. Real promotions and discounts help a lot (Rohlik 0.195 -> 0.164); M5 prices, SNAP days
+and events change nothing, as found before. The gain exists only when the user supplies the future values of these columns.
+
 ## Report and slides (`docs/`)
 
 - `docs/Demand_Copilot_report.docx`: technical report in Russian (task, data, methods, experiments, app and 5-minute demo script,

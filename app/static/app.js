@@ -62,7 +62,7 @@ async function loadExample(name) {
     const r = await fetch(`/examples/${name}.csv`);
     if (!r.ok) throw new Error(`${T().server_error} ${r.status}`);
     state.csvText = await r.text(); state.csvName = `${name}.csv`; setHeader(state.csvText);
-    state.cols = { date: e.cols.date, item: e.cols.item, sales: e.cols.sales, price: e.cols.price || "" };
+    state.cols = { date: e.cols.date, item: e.cols.item, sales: e.cols.sales, price: e.cols.price || "", promo: e.cols.promo || "", holiday: e.cols.holiday || "" };
   } catch (err) { state.busy = false; state.error = errorText(err); return render(); }
   state.busy = false; await analyze();
 }
@@ -82,9 +82,11 @@ function setHeader(text) {
   state.header = splitHeader(text);
   const h = state.header;
   state.cols = { date: guess(h, ["date", "day", "дата"], 0), item: guess(h, ["item", "sku", "product", "товар", "article"], 1),
-                 sales: guess(h, ["sale", "qty", "unit", "quant", "прод", "кол"], 2), price: "" };
+                 sales: guess(h, ["sale", "qty", "unit", "quant", "прод", "кол"], 2), price: "", promo: "", holiday: "" };
   const p = h.find((c) => /price|цена/i.test(c));
   if (p) state.cols.price = p;
+  const pr = h.find((c) => /promo|discount|скидк|акци/i.test(c)); if (pr) state.cols.promo = pr;
+  const hl = h.find((c) => /holiday|праздн/i.test(c)); if (hl) state.cols.holiday = hl;
 }
 
 // ---------- panel ----------
@@ -107,7 +109,8 @@ function renderPanel() {
     if (state.header.length) {
       const h = state.header;
       data += sel("col-date", t.col_date, h, state.cols.date) + sel("col-item", t.col_item, h, state.cols.item) + sel("col-sales", t.col_sales, h, state.cols.sales) +
-        sel("col-price", t.col_price, [t.none, ...h], state.cols.price || t.none);
+        sel("col-price", t.col_price, [t.none, ...h], state.cols.price || t.none) + sel("col-promo", t.col_promo, [t.none, ...h], state.cols.promo || t.none) +
+        sel("col-holiday", t.col_holiday, [t.none, ...h], state.cols.holiday || t.none) + `<p class="note">${esc(t.cov_note)}</p>`;
     }
     data += `<label class="field">${esc(t.stock_file)}</label><button class="btn" id="pick-stock" type="button">${esc(t.stock_file.split(" (")[0])}…</button>` +
       `<input id="file-stock" type="file" accept=".csv,text/csv,text/plain" hidden><span class="filename">${esc(state.stockName || t.no_file)}</span>`;
@@ -136,6 +139,7 @@ function bindPanel() {
   pick("#pick-stock", "#file-stock", (name, text) => { state.stockName = name; state.stockText = text; renderPanel(); analyze(); });
   [["#col-date", "date"], ["#col-item", "item"], ["#col-sales", "sales"]].forEach(([id, key]) => { const e = $(id); if (e) e.addEventListener("change", () => { state.cols[key] = e.value; analyze(); }); });
   const price = $("#col-price"); if (price) price.addEventListener("change", () => { state.cols.price = price.value === T().none ? "" : price.value; analyze(); });
+  [["#col-promo", "promo"], ["#col-holiday", "holiday"]].forEach(([id, key]) => { const e = $(id); if (e) e.addEventListener("change", () => { state.cols[key] = e.value === T().none ? "" : e.value; analyze(); }); });
   $("#lead").addEventListener("change", (e) => { state.lead = Number(e.target.value); reloadPlan(); });
   $("#service").addEventListener("change", (e) => { state.service = Number(e.target.value); reloadPlan(); });
 }

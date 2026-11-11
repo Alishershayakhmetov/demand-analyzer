@@ -34,6 +34,12 @@ EXAMPLES = {
                                                   ru="Оптовик: строки счетов как есть, с возвратами", en="Wholesaler: raw invoice lines with returns"),
     "rossmann_300_stores_euro": dict(date="date", item="store", sales="sales", price=None, what="store-level sales in euro (scale stress test)",
                                      ru="Сети магазинов Rossmann: продажи магазинов в евро", en="Rossmann stores: sales per store in euro"),
+    "rohlik_with_future": dict(date="date", item="item", sales="sales", price="price", promo="promo", holiday="holiday", what="Rohlik with price, discount, holiday and the next 28 days as covariate rows",
+                               ru="Rohlik с ценой, скидкой, праздниками и будущими 28 днями", en="Rohlik with price, discount, holidays and the next 28 days"),
+    "rossmann_with_future": dict(date="date", item="store", sales="sales", price=None, promo="promo", holiday="holiday", what="Rossmann with promo, holidays and the next 28 days",
+                                 ru="Rossmann с акциями, праздниками и будущими 28 днями", en="Rossmann with promo, holidays and the next 28 days"),
+    "m5_with_future": dict(date="date", item="item", sales="sales", price="price", promo="promo", holiday="holiday", what="M5 CA_1 with price, SNAP, events and the next 28 days",
+                           ru="M5 с ценой, SNAP, событиями и будущими 28 днями", en="M5 with price, SNAP, events and the next 28 days"),
 }
 EXAMPLES_DIR = C.ROOT / "examples"
 
@@ -98,7 +104,7 @@ def meta() -> dict:
         t = pd.read_csv(tst)
         keep = ["seasonal naive", "28-day average", "weekday average, 8 weeks", "AutoETS", "LightGBM selected 11 (FINAL, stored model)"]
         out["quality_test"] = t[t.model.isin(keep)][["model", "daily_wape", "weekly_wape", "wape_28d"]].round(4).to_dict("records")
-    out["examples"] = [dict(name=k, label_ru=v["ru"], label_en=v["en"], cols={kk: v[kk] for kk in ("date", "item", "sales", "price")},
+    out["examples"] = [dict(name=k, label_ru=v["ru"], label_en=v["en"], cols={kk: v.get(kk) for kk in ("date", "item", "sales", "price", "promo", "holiday")},
                             size_mb=round((EXAMPLES_DIR / f"{k}.csv").stat().st_size / 1e6, 1)) for k, v in EXAMPLES.items() if (EXAMPLES_DIR / f"{k}.csv").exists()]
     out["frontier_image"] = (C.REPORTS / "figures" / "inventory_frontier.png").exists()
     return out
@@ -139,7 +145,8 @@ def _analyze(payload: dict) -> dict:
         for key in ("date", "item", "sales"):
             if c.get(key) not in df.columns:
                 raise UserError(f"column for '{key}' is not in the file")
-        cols = dict(date_col=c["date"], item_col=c["item"], sales_col=c["sales"], price_col=c.get("price") if c.get("price") in df.columns else None)
+        cols = dict(date_col=c["date"], item_col=c["item"], sales_col=c["sales"], price_col=c.get("price") if c.get("price") in df.columns else None,
+                    promo_col=c.get("promo") if c.get("promo") in df.columns else None, holiday_col=c.get("holiday") if c.get("holiday") in df.columns else None)
     try:
         shop = S.to_shop(df, **cols)
     except ValueError as e:

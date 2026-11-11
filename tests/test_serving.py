@@ -115,3 +115,35 @@ class TrainServeConsistencyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CovariateTest(unittest.TestCase):
+    def test_future_rows_carry_covariates_and_model_uses_promo(self):
+        from demand import covariate as CV
+        rng = np.random.default_rng(0)
+        hist_dates = pd.date_range(end="2024-03-10", periods=300)  # ends on a Sunday
+        fut_dates = pd.date_range("2024-03-11", periods=28)
+        rows = []
+        for item, base in (("a", 5), ("b", 3)):
+            for d in hist_dates:
+                promo = float(rng.random() < 0.15)
+                rows.append((d, item, rng.poisson(base * (3 if promo else 1)), promo))
+            for d in fut_dates:
+                rows.append((d, item, np.nan, 1.0 if d.day % 5 == 0 else 0.0))
+        df = pd.DataFrame(rows, columns=["date", "item", "sales", "promo"])
+        shop = to_shop(df, "date", "item", "sales", promo_col="promo")
+        self.assertEqual(shop.Y.shape[1], 300)
+        self.assertTrue(shop.cov["future_known"])
+        self.assertEqual(shop.cov["promo"].shape, (2, 328))
+        self.assertTrue(CV.available(shop))
+        model = CV.fit(shop, 300 - 28)
+        f = CV.predict(model, shop, 300)
+        self.assertEqual(f.shape, (2, 28))
+        promo_days = shop.cov["promo"][0, 300:328] > 0
+        self.assertGreater(f[0][promo_days].mean(), 1.5 * f[0][~promo_days].mean())  # the promotion lift was learned from the file itself
+
+    def test_no_future_rows_means_no_covariate_model(self):
+        from demand import covariate as CV
+        dates = pd.date_range(end="2024-03-10", periods=200)
+        df = pd.DataFrame({"date": dates, "item": "a", "sales": 3.0, "promo": 0.0})
+        self.assertFalse(CV.available(to_shop(df, "date", "item", "sales", promo_col="promo")))

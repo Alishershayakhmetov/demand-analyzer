@@ -1,0 +1,31 @@
+rohlik w0: without -> Chronos-Bolt + Chronos-Bolt + weekday average | with -> Covariate LightGBM + Covariate LightGBM + Chronos-Bolt
+rohlik w1: without -> Chronos-Bolt + Chronos-Bolt + weekday average | with -> Covariate LightGBM + Covariate LightGBM + Chronos-Bolt
+rohlik w2: without -> Chronos-Bolt + Chronos-Bolt + weekday average | with -> Covariate LightGBM + Covariate LightGBM + Chronos-Bolt
+rossmann w0: without -> Last year (level-adjusted) + Chronos-Bolt + LightGBM (M5) + weekday average | with -> Last year (level-adjusted) + Covariate LightGBM
+rossmann w1: without -> Last year (level-adjusted) + 28-day average | with -> Last year (level-adjusted) + Covariate LightGBM + Chronos-Bolt
+rossmann w2: without -> Last year (level-adjusted) + MSTL (weekly season + trend) | with -> Covariate LightGBM + Chronos-Bolt + Last year (level-adjusted)
+m5 w0: without -> weekday average + 28-day average | with -> Covariate LightGBM + weekday average
+m5 w1: without -> Chronos-Bolt + weekday average + 28-day average | with -> Covariate LightGBM + Covariate LightGBM + Chronos-Bolt
+m5 w2: without -> Chronos-Bolt + weekday average + 28-day average | with -> Covariate LightGBM + Chronos-Bolt + Chronos-Bolt + weekday average
+
+Weekly WAPE
+dataset                      rohlik  rossmann     m5
+method                                              
+28-day average                0.229     0.153  0.337
+covariate model alone         0.170     0.164  0.335
+seasonal naive                0.241     0.189  0.404
+selector with covariates      0.164     0.105  0.339
+selector without covariates   0.195     0.115  0.335
+weekday average               0.227     0.154  0.343
+
+relative to the best simple baseline
+dataset                      rohlik rossmann     m5
+method                                             
+selector without covariates  -14.0%   -24.8%  -0.6%
+selector with covariates     -27.9%   -31.5%  +0.4%
+covariate model alone        -25.1%    +7.1%  -0.7%
+mean: without -13.1%, with -19.7%
+
+bias of the covariate model alone: {'m5': -0.053, 'rohlik': -0.015, 'rossmann': -0.134}
+rule (a): PASSED
+rule (b): NOT PASSED

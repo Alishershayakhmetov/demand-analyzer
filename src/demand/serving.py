@@ -28,26 +28,39 @@ class Shop:
     price: np.ndarray | None      # (items,) median recent price, None without a price column
     first_idx: np.ndarray         # (items,) index of the first non-zero sale (= days if never sold)
     notes: list[str] = field(default_factory=list)
+    cov: dict | None = None       # price / promo (items, days+28), holiday (days+28,), future_known, dates; None without covariate columns
 
 
-def to_shop(df: pd.DataFrame, date_col: str, item_col: str, sales_col: str, price_col: str | None = None) -> Shop:
-    """Clean a long table (one row per item and day) into a Shop; everything odd is counted and reported in `notes`."""
+def to_shop(df: pd.DataFrame, date_col: str, item_col: str, sales_col: str, price_col: str | None = None,
+            promo_col: str | None = None, holiday_col: str | None = None) -> Shop:
+    """Clean a long table (one row per item and day) into a Shop; everything odd is counted and reported in `notes`.
+
+    Rows with a date but without sales that come after the last day with sales are kept only as carriers of covariates for the next 28 days
+    (price, promotion or discount, holiday flag) so that known future events can be used."""
     notes = []
     d = pd.DataFrame({"date": pd.to_datetime(df[date_col], errors="coerce"), "item": df[item_col].astype(str),
                       "sales": pd.to_numeric(df[sales_col], errors="coerce")})
-    if price_col:
-        d["price"] = pd.to_numeric(df[price_col], errors="coerce")
-    bad = d.date.isna() | d.sales.isna()
-    if bad.any():
-        notes.append(f"{int(bad.sum())} rows with an unreadable date or sales value were dropped")
-    d = d[~bad]
+    extras = {k: c for k, c in (("price", price_col), ("promo", promo_col), ("holiday", holiday_col)) if c}
+    for k, c in extras.items():
+        d[k] = pd.to_numeric(df[c], errors="coerce")
+    no_date = d.date.isna()
+    d = d[~no_date].copy()
+    d["date"] = d.date.dt.normalize()
+    has_sales = d.sales.notna()
+    if not has_sales.any():
+        raise ValueError("no readable sales values")
+    last_hist = d.date[has_sales].max()
+    bad = int(no_date.sum() + ((~has_sales) & (d.date <= last_hist)).sum())
+    if bad:
+        notes.append(f"{bad} rows with an unreadable date or sales value were dropped")
+    cov_src = d
+    d = d[has_sales].copy()
     if (d.sales < 0).any():
         notes.append(f"{int((d.sales < 0).sum())} negative sales values (returns) were set to 0")
         d["sales"] = d.sales.clip(lower=0)
     if d.duplicated(["date", "item"]).any():
         notes.append(f"{int(d.duplicated(['date', 'item']).sum())} duplicate item-day rows were summed")
-    agg = {"sales": "sum", **({"price": "mean"} if price_col else {})}
-    d["date"] = d.date.dt.normalize()
+    agg = {"sales": "sum", **{k: "mean" for k in extras}}
     d = d.groupby(["item", "date"]).agg(agg).reset_index()
     last = d.date.max()
     cut = (last.weekday() + 1) % 7  # days after the last Sunday
@@ -65,7 +78,22 @@ def to_shop(df: pd.DataFrame, date_col: str, item_col: str, sales_col: str, pric
         price = pr.iloc[:, -MIN_DAYS:].median(axis=1).to_numpy()
     Y = sales.to_numpy()
     first = np.where((Y > 0).any(axis=1), (Y > 0).argmax(axis=1), Y.shape[1])
-    return Shop(sales.index.tolist(), dates, Y, price, first, notes)
+    cov = None
+    if extras:
+        ext = pd.date_range(dates[0], last + pd.Timedelta(days=C.HORIZON), freq="D")
+        src = cov_src[cov_src.date.isin(ext)]
+        grid = {}
+        for k in extras:
+            g = src.groupby(["item", "date"])[k].mean().unstack("date").reindex(index=sales.index, columns=ext)
+            grid[k] = g
+        cov = {"dates": ext, "future_known": bool(src.date.gt(last).any())}
+        if "price" in grid:
+            cov["price"] = grid["price"].ffill(axis=1).bfill(axis=1).to_numpy()
+        if "promo" in grid:
+            cov["promo"] = grid["promo"].fillna(0.0).to_numpy()
+        if "holiday" in grid:
+            cov["holiday"] = np.nan_to_num(grid["holiday"].max(axis=0).to_numpy(), nan=0.0)  # a calendar flag is the same for every item
+    return Shop(sales.index.tolist(), dates, Y, price, first, notes, cov)
 
 
 def load_model() -> tuple[lgb.Booster, dict]:

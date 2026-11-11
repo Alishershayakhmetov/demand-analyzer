@@ -14,3 +14,11 @@ The CSV files here are generated, not stored in git (`python -I -X utf8 scripts/
 
 Check each source's terms before using the data outside coursework. Results of forecasting these files are in the main README
 (section "Check on other data").
+
+## Files with price, promotion and holiday columns (from `scripts/28_covariate_examples.py`)
+
+| File | Columns | Notes |
+|---|---|---|
+| `rohlik_with_future.csv` | date, item, sales, price, promo (largest of 7 discount types), holiday (holiday or shops closed) | the last 28 days are rows with covariates and empty sales |
+| `rossmann_with_future.csv` | date, store, sales, promo (0/1), holiday (state holiday or store closed) | same |
+| `m5_with_future.csv` | date, item, sales, price, promo (= SNAP day), holiday (= event day) | same |

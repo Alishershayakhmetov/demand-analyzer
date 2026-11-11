@@ -9,6 +9,7 @@ Files too short for a backtest get the weekday average.
 import numpy as np
 
 from . import baselines as B
+from . import covariate as CV
 from . import metrics as M
 from . import serving as S
 from . import universal as U
@@ -117,6 +118,8 @@ def raw_candidates(shop: S.Shop, origin: int, booster, features, limit, norm_mod
 def _combine(fc: dict, wd8: np.ndarray, corr: float | None) -> dict:
     """Add the methods derived from others: bias-corrected Chronos and the averages with Chronos."""
     out = dict(fc)
+    if "Covariate LightGBM" in fc and "Chronos-Bolt" in fc:
+        out["Covariate LightGBM + Chronos-Bolt"] = (fc["Covariate LightGBM"] + fc["Chronos-Bolt"]) / 2
     if "Chronos-Bolt" in fc:
         ch = fc["Chronos-Bolt"]
         out["Chronos-Bolt + weekday average"] = (ch + wd8) / 2
@@ -144,6 +147,17 @@ def select(shop: S.Shop, booster, features, limit, norm_model=None, weekly_model
         fc, _ = raw_candidates(shop, o, booster, features, limit, norm_model, weekly_model, use_chronos, use_stat)
         raws.append((o, fc))
     final_raw, guard = raw_candidates(shop, T, booster, features, limit, norm_model, weekly_model, use_chronos, use_stat)
+
+    if CV.available(shop) and raws:  # model trained on this file, uses price / promotion / holiday columns known for the next 28 days
+        o_min = min(o for o, _ in raws)
+        bt_model = CV.fit(shop, o_min - HORIZON) if o_min - HORIZON >= U.MIN_HISTORY else None
+        for o, fc in raws:
+            if bt_model is not None:
+                first_o = np.minimum(shop.first_idx, o)
+                fc["Covariate LightGBM"] = _status_fix(CV.predict(bt_model, shop, o), shop.Y[:, :o], first_o)
+        final_model = CV.fit(shop, T - HORIZON)
+        if final_model is not None and bt_model is not None:
+            final_raw["Covariate LightGBM"] = _status_fix(CV.predict(final_model, shop, T), shop.Y, np.minimum(shop.first_idx, T))
     scores: dict[str, list[float]] = {}
     combos = []
     for i, (o, fc) in enumerate(raws):
