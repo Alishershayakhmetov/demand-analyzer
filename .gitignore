@@ -6,6 +6,6 @@ data/raw/
 data/processed/
 models/
 *.zip
-docs/build/node_modules/
+docs/
 data/external/
 examples/*.csv
